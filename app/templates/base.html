@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Brevo Campaign Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+            },
+            colors: {
+              gray: {
+                850: "#1f2937",
+                900: "#111827",
+                950: "#030712",
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gray-950 text-gray-100 min-h-screen selection:bg-blue-500 selection:text-white"
+  >
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Header -->
+      <header
+        class="flex justify-between items-center mb-12 border-b border-gray-800 pb-6"
+      >
+        <div>
+          <h1 class="text-3xl font-bold tracking-tight text-white">
+            Campaign Manager
+          </h1>
+          <p class="text-gray-400 mt-1">
+            Brevo API Automation • Rate Limited • Optimized
+          </p>
+        </div>
+        <div class="flex items-center gap-4">
+          <div
+            class="flex items-center gap-2 px-3 py-1 bg-gray-900 rounded-full border border-gray-800 text-sm"
+          >
+            <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+            <span class="text-gray-300">System Active</span>
+          </div>
+        </div>
+      </header>
+
+      {% block content %}{% endblock %}
+    </div>
+
+    <!-- Toast Notification -->
+    <div
+      id="toast"
+      class="fixed bottom-5 right-5 px-6 py-4 bg-gray-900 border border-gray-800 rounded-lg shadow-xl translate-y-24 transition-transform duration-300 z-50"
+    >
+      <h4 id="toast-title" class="text-sm font-semibold text-white mb-1">
+        Notification
+      </h4>
+      <p id="toast-message" class="text-sm text-gray-400">Message content</p>
+    </div>
+
+    <script>
+      function showToast(title, message, isError = false) {
+        const toast = document.getElementById("toast");
+        document.getElementById("toast-title").innerText = title;
+        document.getElementById("toast-message").innerText = message;
+        if (isError) {
+          toast.classList.add("border-red-900/50", "bg-red-900/10");
+        } else {
+          toast.classList.remove("border-red-900/50", "bg-red-900/10");
+        }
+        toast.classList.remove("translate-y-24");
+        setTimeout(() => {
+          toast.classList.add("translate-y-24");
+        }, 3000);
+      }
+    </script>
+  </body>
+</html>

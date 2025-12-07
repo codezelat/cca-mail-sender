@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Brevo Campaign Manager - Platform for Growth</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --foreground-rgb: 255, 255, 255;
+        --background-start-rgb: 0, 0, 0;
+        --background-end-rgb: 0, 0, 0;
+      }
+      body {
+        font-family: "Inter", sans-serif;
+        font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+        background: #000;
+        color: #fff;
+        overflow-x: hidden;
+      }
+      .glass-nav {
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .hero-glow {
+        position: absolute;
+        width: 600px;
+        height: 600px;
+        background: radial-gradient(
+          circle,
+          rgba(124, 58, 237, 0.15) 0%,
+          rgba(59, 130, 246, 0.05) 40%,
+          transparent 70%
+        );
+        border-radius: 50%;
+        filter: blur(80px);
+        top: -200px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 0;
+        opacity: 0.6;
+        animation: pulse-glow 8s ease-in-out infinite;
+      }
+      @keyframes pulse-glow {
+        0%,
+        100% {
+          transform: translateX(-50%) scale(1);
+          opacity: 0.6;
+        }
+        50% {
+          transform: translateX(-50%) scale(1.1);
+          opacity: 0.8;
+        }
+      }
+      .bento-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        transition: all 0.3s ease;
+      }
+      .bento-card:hover {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.15);
+        transform: translateY(-2px);
+      }
+      .dashboard-mockup {
+        background: #0a0a0a;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.8),
+          0 0 0 1px rgba(255, 255, 255, 0.05);
+        position: relative;
+        overflow: hidden;
+      }
+      /* Fake UI Lines */
+      .ui-line {
+        height: 8px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.1);
+      }
+      .ui-circle {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+      }
+    </style>
+  </head>
+  <body class="antialiased selection:bg-purple-500/30">
+    <!-- Navbar -->
+    <nav class="glass-nav fixed w-full z-50 transition-all duration-300">
+      <div
+        class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between"
+      >
+        <div class="flex items-center gap-3 group cursor-pointer">
+          <div
+            class="h-8 w-8 rounded-lg bg-gradient-to-tr from-purple-600 to-blue-600 flex items-center justify-center font-bold text-white shadow-lg shadow-purple-900/20 group-hover:scale-105 transition-transform"
+          >
+            B
+          </div>
+          <span
+            class="font-semibold text-sm tracking-wide text-gray-200 group-hover:text-white transition-colors"
+            >Campaign Manager</span
+          >
+        </div>
+        <div class="hidden md:flex items-center gap-6">
+          <a
+            href="#features"
+            class="text-sm text-gray-400 hover:text-white transition-colors"
+            >Features</a
+          >
+          <a
+            href="https://github.com/codezelat/cca-mail-sender"
+            target="_blank"
+            class="text-sm text-gray-400 hover:text-white transition-colors"
+            >GitHub</a
+          >
+        </div>
+        <div class="flex items-center gap-4">
+          <a
+            href="/login"
+            class="text-sm text-gray-400 hover:text-white transition-colors px-2"
+            >Log in</a
+          >
+          <a
+            href="/signup"
+            class="text-sm bg-white text-black px-4 py-2 rounded-full font-medium hover:bg-gray-200 transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+            >Sign Up</a
+          >
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main
+      class="relative pt-32 pb-20 px-6 max-w-7xl mx-auto flex flex-col items-center"
+    >
+      <div class="hero-glow"></div>
+
+      <!-- Hero Section -->
+      <div class="text-center max-w-4xl z-10 relative animation-fade-in-up">
+        <div
+          class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-purple-300 mb-8 backdrop-blur-sm"
+        >
+          <span class="flex h-2 w-2 relative">
+            <span
+              class="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"
+            ></span>
+            <span
+              class="relative inline-flex rounded-full h-2 w-2 bg-purple-500"
+            ></span>
+          </span>
+          v2.0 Now Available with Multi-user Support
+        </div>
+
+        <h1 class="text-5xl md:text-7xl font-bold tracking-tight mb-8">
+          <span
+            class="bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-white/40"
+            >Ship campaigns</span
+          ><br />
+          <span class="text-gray-500">without the limits.</span>
+        </h1>
+
+        <p
+          class="text-lg md:text-xl text-gray-400 mb-10 max-w-2xl mx-auto leading-relaxed"
+        >
+          The open-source email manager for Brevo. Handle rate limits, manage
+          multiple users, and visualize your growth with a premium, persistent
+          dashboard.
+        </p>
+
+        <div
+          class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-24"
+        >
+          <a
+            href="/signup"
+            class="h-12 px-8 rounded-full bg-white text-black font-semibold flex items-center justify-center hover:bg-gray-200 transition-all text-sm min-w-[160px] shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+          >
+            Start Deploying
+          </a>
+          <a
+            href="https://github.com/codezelat/cca-mail-sender"
+            class="h-12 px-8 rounded-full bg-gray-900 border border-gray-800 text-gray-300 font-medium flex items-center justify-center hover:bg-gray-800 hover:text-white hover:border-gray-600 transition-all text-sm min-w-[160px]"
+          >
+            View Documentation
+          </a>
+        </div>
+      </div>
+
+      <!-- CSS-Only Dashboard Mockup (No Placeholders) -->
+      <div class="w-full max-w-5xl z-10 relative perspective-1000 group">
+        <div
+          class="dashboard-mockup bg-[#0C0C0C] aspect-[16/9] md:aspect-[2/1] w-full p-6 flex gap-6 transform transition-all duration-700 group-hover:rotate-x-2"
+        >
+          <!-- Sidebar Mock -->
+          <div
+            class="w-16 md:w-48 hidden md:flex flex-col gap-4 border-r border-white/5 pr-6"
+          >
+            <div
+              class="h-8 w-8 rounded-lg bg-gradient-to-tr from-purple-500/20 to-blue-500/20 mb-4"
+            ></div>
+            <div class="ui-line w-20 bg-white/20"></div>
+            <div class="ui-line w-32"></div>
+            <div class="ui-line w-24"></div>
+            <div class="ui-line w-28"></div>
+            <div class="mt-auto ui-line w-20 bg-red-500/20"></div>
+          </div>
+
+          <!-- Main Content Mock -->
+          <div class="flex-1 flex flex-col gap-6">
+            <!-- Header -->
+            <div class="flex justify-between items-center mb-2">
+              <div class="flex flex-col gap-2">
+                <div class="ui-line w-32 bg-white/20 h-4"></div>
+                <div class="ui-line w-48 opacity-50"></div>
+              </div>
+              <div class="flex gap-2">
+                <div class="ui-circle w-8 h-8"></div>
+                <div class="ui-circle w-8 h-8 bg-blue-500/20"></div>
+              </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-3 gap-4">
+              <div
+                class="bg-gray-800/20 rounded-lg p-4 h-24 border border-white/5"
+              >
+                <div class="ui-line w-16 mb-2 opacity-50"></div>
+                <div class="ui-line w-12 h-6 bg-white/20"></div>
+              </div>
+              <div
+                class="bg-gray-800/20 rounded-lg p-4 h-24 border border-white/5"
+              >
+                <div class="ui-line w-16 mb-2 opacity-50"></div>
+                <div class="ui-line w-12 h-6 bg-green-500/20"></div>
+              </div>
+              <div
+                class="bg-gray-800/20 rounded-lg p-4 h-24 border border-white/5"
+              >
+                <div class="ui-line w-16 mb-2 opacity-50"></div>
+                <div class="ui-line w-12 h-6 bg-yellow-500/20"></div>
+              </div>
+            </div>
+
+            <!-- Chart Area -->
+            <div
+              class="flex-1 bg-gray-800/20 rounded-lg border border-white/5 p-4 flex items-end gap-2 relative overflow-hidden"
+            >
+              <div class="absolute top-4 left-4 ui-line w-24 opacity-50"></div>
+              <!-- Fake Bars -->
+              <div class="w-full bg-blue-500/10 h-[40%] rounded-t-sm"></div>
+              <div class="w-full bg-blue-500/20 h-[60%] rounded-t-sm"></div>
+              <div class="w-full bg-blue-500/30 h-[30%] rounded-t-sm"></div>
+              <div class="w-full bg-blue-500/40 h-[80%] rounded-t-sm"></div>
+              <div class="w-full bg-blue-500/50 h-[50%] rounded-t-sm"></div>
+              <div class="w-full bg-blue-500/60 h-[70%] rounded-t-sm"></div>
+              <div
+                class="w-full bg-purple-500 h-[90%] rounded-t-sm shadow-[0_0_20px_rgba(168,85,247,0.3)]"
+              ></div>
+            </div>
+          </div>
+        </div>
+        <!-- Glow under dashboard -->
+        <div
+          class="absolute -bottom-10 left-0 right-0 h-40 bg-gradient-to-t from-purple-900/10 to-transparent blur-3xl -z-10"
+        ></div>
+      </div>
+
+      <!-- Bento Grid Features -->
+      <div
+        id="features"
+        class="mt-32 w-full grid grid-cols-1 md:grid-cols-3 gap-6"
+      >
+        <!-- Card 1 -->
+        <div class="bento-card p-8 flex flex-col justify-between h-64">
+          <div
+            class="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 mb-4"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+              ></path>
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-xl font-semibold mb-2">Secure Authentication</h3>
+            <p class="text-gray-400 text-sm leading-relaxed">
+              Enterprise-grade security with JWT tokens and bcrypt hashing. Your
+              data is isolated and protected.
+            </p>
+          </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div
+          class="bento-card p-8 flex flex-col justify-between h-64 md:col-span-2 relative overflow-hidden group"
+        >
+          <div
+            class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-b from-purple-500/5 to-transparent rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-purple-500/10 transition-colors"
+          ></div>
+          <div class="flex justify-between items-start">
+            <div
+              class="h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400"
+            >
+              <svg
+                class="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"
+                ></path>
+              </svg>
+            </div>
+            <span
+              class="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-gray-400"
+              >Database Powered</span
+            >
+          </div>
+          <div class="mt-8">
+            <h3 class="text-xl font-semibold mb-2">Persistent Configuration</h3>
+            <p class="text-gray-400 text-sm leading-relaxed max-w-lg">
+              Never lose your settings again. Store API keys, templates, and
+              rate limits in your personal cloud database. Reloading the page?
+              No problem.
+            </p>
+          </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div
+          class="bento-card p-8 flex flex-col justify-between h-64 md:col-span-2"
+        >
+          <div class="flex items-center gap-4 mb-6">
+            <div class="flex-1 bg-gray-800/50 h-2 rounded-full overflow-hidden">
+              <div class="bg-green-500 w-[75%] h-full rounded-full"></div>
+            </div>
+            <span class="text-xs font-mono text-green-400">75% Sent</span>
+          </div>
+          <div>
+            <h3 class="text-xl font-semibold mb-2">Real-time Analytics</h3>
+            <p class="text-gray-400 text-sm leading-relaxed">
+              Watch your campaigns deploy in real-time. Monitor success rates,
+              pending queues, and failed deliveries with instant visual
+              feedback.
+            </p>
+          </div>
+        </div>
+
+        <!-- Card 4 -->
+        <div
+          class="bento-card p-8 flex flex-col justify-between h-64 bg-gradient-to-br from-white/5 to-transparent"
+        >
+          <div
+            class="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center text-green-400 mb-4"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              ></path>
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-xl font-semibold mb-2">Smart Scheduling</h3>
+            <p class="text-gray-400 text-sm leading-relaxed">
+              Automatic rate limiting ensures you never hit Brevo's blockers.
+              Set it and forget it.
+            </p>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-gray-800 py-12 bg-black mt-12">
+      <div
+        class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6"
+      >
+        <div class="text-gray-500 text-sm">
+          &copy; 2024 Campaign Manager. Open Source.
+        </div>
+        <div class="flex gap-6">
+          <a
+            href="#"
+            class="text-gray-500 hover:text-white transition-colors text-sm"
+            >Privacy</a
+          >
+          <a
+            href="#"
+            class="text-gray-500 hover:text-white transition-colors text-sm"
+            >Terms</a
+          >
+          <a
+            href="#"
+            class="text-gray-500 hover:text-white transition-colors text-sm"
+            >Twitter</a
+          >
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,743 @@
+{% extends "base.html" %} {% block content %}
+<div class="min-h-screen bg-black/50">
+  <!-- Top Navigation -->
+  <nav
+    class="border-b border-gray-800 bg-black/40 backdrop-blur-xl sticky top-0 z-40"
+  >
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div
+          class="h-8 w-8 rounded-lg bg-gradient-to-tr from-purple-600 to-blue-600 flex items-center justify-center font-bold text-white shadow-lg shadow-purple-900/20"
+        >
+          B
+        </div>
+        <span class="font-semibold text-sm tracking-wide text-gray-200"
+          >Campaign Manager</span
+        >
+      </div>
+      <button
+        onclick="logout()"
+        class="text-sm text-gray-400 hover:text-red-400 transition-colors flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/5"
+      >
+        <span>Sign Out</span>
+        <svg
+          class="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+          ></path>
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <div class="max-w-7xl mx-auto px-6 py-8">
+    <div class="flex flex-col lg:flex-row gap-8">
+      <!-- Left Column: Main Content -->
+      <div class="flex-1 space-y-6">
+        <!-- Quick Stats Row -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <!-- Total -->
+          <div
+            class="bg-gray-900/40 border border-white/5 rounded-xl p-5 backdrop-blur-sm hover:bg-gray-900/60 transition-colors group"
+          >
+            <div
+              class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1 group-hover:text-gray-400"
+            >
+              Total Imported
+            </div>
+            <div
+              class="text-2xl font-bold text-white tracking-tight"
+              id="stat-total"
+            >
+              {{ stats.total if stats else 0 }}
+            </div>
+          </div>
+
+          <!-- Pending -->
+          <div
+            class="bg-gray-900/40 border border-white/5 rounded-xl p-5 backdrop-blur-sm hover:bg-gray-900/60 transition-colors group"
+          >
+            <div
+              class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1 group-hover:text-yellow-500/80"
+            >
+              Queue Pending
+            </div>
+            <div
+              class="text-2xl font-bold text-yellow-500 tracking-tight"
+              id="stat-pending"
+            >
+              {{ stats.pending if stats else 0 }}
+            </div>
+          </div>
+
+          <!-- Sent -->
+          <div
+            class="bg-gray-900/40 border border-white/5 rounded-xl p-5 backdrop-blur-sm hover:bg-gray-900/60 transition-colors group"
+          >
+            <div
+              class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1 group-hover:text-green-500/80"
+            >
+              Sent Successfully
+            </div>
+            <div
+              class="text-2xl font-bold text-green-500 tracking-tight"
+              id="stat-sent"
+            >
+              {{ stats.sent if stats else 0 }}
+            </div>
+          </div>
+
+          <!-- Failed -->
+          <div
+            class="bg-gray-900/40 border border-white/5 rounded-xl p-5 backdrop-blur-sm hover:bg-gray-900/60 transition-colors group"
+          >
+            <div
+              class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1 group-hover:text-red-500/80"
+            >
+              Failed
+            </div>
+            <div
+              class="text-2xl font-bold text-red-500 tracking-tight"
+              id="stat-failed"
+            >
+              {{ stats.failed if stats else 0 }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Usage Limits Card -->
+        <div
+          class="bg-gray-900/40 border border-white/5 rounded-xl p-6 backdrop-blur-sm"
+        >
+          <h3
+            class="text-base font-semibold text-white mb-4 flex items-center gap-2"
+          >
+            <svg
+              class="w-5 h-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              ></path>
+            </svg>
+            Usage Limits
+          </h3>
+          <div class="grid md:grid-cols-2 gap-8">
+            <!-- Hourly Limit -->
+            <div class="space-y-2">
+              <div class="flex justify-between items-end">
+                <span class="text-sm text-gray-400">Hourly Rate</span>
+                <div class="text-right">
+                  <span id="stat-used-hour" class="text-lg font-bold text-white"
+                    >{{ settings.emails_sent_this_hour }}</span
+                  >
+                  <span class="text-sm text-gray-600 font-medium"
+                    >/ {{ settings.hourly_limit }}</span
+                  >
+                </div>
+              </div>
+              <div class="h-2 bg-gray-800 rounded-full overflow-hidden">
+                <div
+                  id="bar-used-hour"
+                  class="h-full bg-blue-500 rounded-full transition-all duration-500"
+                  style="width: 0%"
+                ></div>
+              </div>
+            </div>
+
+            <!-- Daily Limit -->
+            <div class="space-y-2">
+              <div class="flex justify-between items-end">
+                <span class="text-sm text-gray-400">Daily Quota</span>
+                <div class="text-right">
+                  <span
+                    id="stat-sent-today"
+                    class="text-lg font-bold text-white"
+                    >{{ settings.emails_sent_today }}</span
+                  >
+                  <span class="text-sm text-gray-600 font-medium"
+                    >/ {{ settings.daily_limit }}</span
+                  >
+                </div>
+              </div>
+              <div class="h-2 bg-gray-800 rounded-full overflow-hidden">
+                <div
+                  id="bar-used-today"
+                  class="h-full bg-purple-500 rounded-full transition-all duration-500"
+                  style="width: 0%"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Activities -->
+        <div
+          class="bg-gray-900/40 border border-white/5 rounded-xl overflow-hidden backdrop-blur-sm flex-1 min-h-[400px]"
+        >
+          <div
+            class="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02]"
+          >
+            <h3 class="text-base font-semibold text-white">Live Activity</h3>
+            <div class="flex items-center gap-2">
+              <span class="relative flex h-2 w-2">
+                <span
+                  class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
+                ></span>
+                <span
+                  class="relative inline-flex rounded-full h-2 w-2 bg-green-500"
+                ></span>
+              </span>
+              <span
+                class="text-xs text-gray-500 uppercase tracking-wider font-medium"
+                >Live</span
+              >
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+              <thead
+                class="bg-gray-900/50 text-gray-500 uppercase font-medium text-xs border-b border-white/5"
+              >
+                <tr>
+                  <th class="px-6 py-3 font-medium">Email</th>
+                  <th class="px-6 py-3 font-medium">Name</th>
+                  <th class="px-6 py-3 font-medium">Status</th>
+                  <th class="px-6 py-3 font-medium">Time</th>
+                  <th class="px-6 py-3 font-medium text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/5" id="activity-table-body">
+                <!-- JS will populate -->
+                <tr>
+                  <td colspan="5" class="px-6 py-8 text-center text-gray-600">
+                    Loading activity...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Controls -->
+      <div class="w-full lg:w-96 space-y-6">
+        <!-- Import Card -->
+        <div
+          class="bg-gray-900/40 border border-white/5 rounded-xl p-6 backdrop-blur-sm"
+        >
+          <h3 class="text-base font-semibold text-white mb-4">
+            Import Contacts
+          </h3>
+          <div
+            id="drop-zone"
+            class="border-2 border-dashed border-gray-700 hover:border-blue-500/50 hover:bg-blue-500/5 rounded-xl p-8 text-center transition-all cursor-pointer group"
+          >
+            <div
+              class="h-10 w-10 bg-gray-800 rounded-lg flex items-center justify-center mx-auto mb-3 group-hover:bg-blue-500/20 transition-colors"
+            >
+              <svg
+                class="w-5 h-5 text-gray-400 group-hover:text-blue-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                ></path>
+              </svg>
+            </div>
+            <p class="text-gray-300 font-medium text-sm">Upload CSV or Excel</p>
+            <p class="text-xs text-gray-500 mt-1">
+              Drag & drop or click to browse
+            </p>
+
+            <div id="upload-progress" class="hidden mt-4">
+              <div class="bg-gray-800 h-1 rounded-full overflow-hidden">
+                <div
+                  class="bg-blue-500 h-full w-1/2 animate-[shimmer_1s_infinite]"
+                ></div>
+              </div>
+              <p class="text-xs text-gray-500 mt-2">Processing...</p>
+            </div>
+          </div>
+          <input
+            type="file"
+            id="file-upload"
+            class="hidden"
+            accept=".xlsx, .xls, .csv"
+          />
+        </div>
+
+        <!-- Settings Card -->
+        <div
+          class="bg-gray-900/40 border border-white/5 rounded-xl p-6 backdrop-blur-sm sticky top-24"
+        >
+          <h3 class="text-base font-semibold text-white mb-6">Configuration</h3>
+          <form id="settings-form" class="space-y-4">
+            <!-- API Key -->
+            <div class="space-y-1.5">
+              <label
+                class="text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >Brevo API Key</label
+              >
+              <input
+                type="password"
+                name="brevo_api_key"
+                value="{{ settings.brevo_api_key or '' }}"
+                class="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-gray-700"
+                placeholder="xkeysib-..."
+                required
+              />
+            </div>
+
+            <!-- Sender Info -->
+            <div class="grid grid-cols-2 gap-4">
+              <div class="space-y-1.5">
+                <label
+                  class="text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >From Email</label
+                >
+                <input
+                  type="email"
+                  name="sender_email"
+                  value="{{ settings.sender_email or '' }}"
+                  class="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-gray-700"
+                  placeholder="you@domain.com"
+                  required
+                />
+              </div>
+              <div class="space-y-1.5">
+                <label
+                  class="text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >From Name</label
+                >
+                <input
+                  type="text"
+                  name="sender_name"
+                  value="{{ settings.sender_name or '' }}"
+                  class="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-gray-700"
+                  placeholder="Marketing"
+                />
+              </div>
+            </div>
+
+            <!-- Subject -->
+            <div class="space-y-1.5">
+              <label
+                class="text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >Subject Line</label
+              >
+              <input
+                type="text"
+                name="subject"
+                value="{{ settings.subject or 'Campaign Update' }}"
+                class="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-gray-700"
+              />
+            </div>
+
+            <!-- Template Selection -->
+            <div class="space-y-1.5">
+              <label
+                class="text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >Email Template</label
+              >
+              <div class="flex gap-2">
+                <div class="relative flex-1">
+                  <select
+                    name="selected_template"
+                    id="selected_template"
+                    class="w-full appearance-none bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer"
+                  >
+                    <option value="">Loading templates...</option>
+                  </select>
+                  <div
+                    class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500"
+                  >
+                    <svg
+                      class="fill-current h-4 w-4"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"
+                      />
+                    </svg>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onclick="document.getElementById('template-upload').click()"
+                  class="bg-white/5 hover:bg-white/10 border border-white/10 text-white p-2 rounded-lg transition-colors flex-shrink-0"
+                  title="Upload New Template"
+                >
+                  <svg
+                    class="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 4v16m8-8H4"
+                    ></path>
+                  </svg>
+                </button>
+                <input
+                  type="file"
+                  id="template-upload"
+                  class="hidden"
+                  accept=".html"
+                  onchange="uploadTemplate(this)"
+                />
+              </div>
+            </div>
+
+            <!-- Limits -->
+            <div class="grid grid-cols-2 gap-4">
+              <div class="space-y-1.5">
+                <label
+                  class="text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >Hourly Limit</label
+                >
+                <input
+                  type="number"
+                  name="hourly_limit"
+                  value="{{ settings.hourly_limit }}"
+                  class="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                />
+              </div>
+              <div class="space-y-1.5">
+                <label
+                  class="text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >Daily Limit</label
+                >
+                <input
+                  type="number"
+                  name="daily_limit"
+                  id="daily_limit_input"
+                  value="{{ settings.daily_limit }}"
+                  class="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              class="w-full bg-white text-black font-semibold h-10 rounded-lg hover:bg-gray-200 transition-all shadow-[0_0_15px_rgba(255,255,255,0.1)] active:scale-[0.98] mt-2"
+            >
+              Save Configuration
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div
+  id="toast-container"
+  class="fixed top-6 right-6 z-50 flex flex-col space-y-4 pointer-events-none"
+></div>
+
+<script>
+  // --- Auth & Globals ---
+  const token = localStorage.getItem("token");
+  if (!token) window.location.href = "/login";
+  const headers = { Authorization: `Bearer ${token}` };
+
+  // --- Toast System ---
+  function showToast(title, message, isError = false) {
+    const container = document.getElementById("toast-container");
+    const toast = document.createElement("div");
+
+    const bgColor = isError
+      ? "bg-red-500/10 border-red-500/20"
+      : "bg-green-500/10 border-green-500/20";
+    const iconColor = isError ? "text-red-400" : "text-green-400";
+    const iconSvg = isError
+      ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />'
+      : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />';
+
+    toast.className = `pointer-events-auto w-80 backdrop-blur-md border ${bgColor} rounded-xl p-4 shadow-2xl transform transition-all duration-500 translate-x-full opacity-0 flex items-start gap-3`;
+    toast.innerHTML = `
+          <div class="mt-0.5 shrink-0 ${iconColor}"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">${iconSvg}</svg></div>
+          <div class="flex-1"><h3 class="text-sm font-medium text-white">${title}</h3><p class="text-sm text-gray-400 mt-1 leading-relaxed">${message}</p></div>
+        `;
+    container.appendChild(toast);
+    requestAnimationFrame(() =>
+      toast.classList.remove("translate-x-full", "opacity-0")
+    );
+    setTimeout(() => {
+      toast.classList.add("translate-x-full", "opacity-0");
+      setTimeout(() => toast.remove(), 500);
+    }, 4000);
+  }
+
+  // --- Stats & Activity ---
+  async function updateStats() {
+    try {
+      const response = await fetch("/api/stats", { headers });
+      if (response.status === 401) {
+        window.location.href = "/login";
+        return;
+      }
+      const data = await response.json();
+
+      // Stats
+      document.getElementById("stat-total").textContent = data.total_contacts;
+      document.getElementById("stat-pending").textContent = data.pending;
+      document.getElementById("stat-sent").textContent = data.sent;
+      document.getElementById("stat-failed").textContent = data.failed;
+
+      // Limits View
+      document.getElementById("stat-used-hour").textContent =
+        data.emails_sent_this_hour;
+      document.getElementById("stat-sent-today").textContent =
+        data.emails_sent_today;
+
+      // Bars
+      const pctHour = Math.min(
+        (data.emails_sent_this_hour / data.hourly_limit) * 100,
+        100
+      );
+      const pctDay = Math.min(
+        (data.emails_sent_today / data.daily_limit) * 100,
+        100
+      );
+      document.getElementById("bar-used-hour").style.width = `${pctHour}%`;
+      document.getElementById("bar-used-today").style.width = `${pctDay}%`;
+
+      updateActivity();
+    } catch (e) {
+      console.error("Stats error", e);
+    }
+  }
+
+  async function updateActivity() {
+    try {
+      const res = await fetch("/api/activity", { headers });
+      const data = await res.json();
+      const tbody = document.getElementById("activity-table-body");
+      tbody.innerHTML = "";
+
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-gray-600 text-sm">No recent activity</td></tr>`;
+        return;
+      }
+
+      data.forEach((row) => {
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-white/[0.02] transition-colors group";
+
+        let statusBadge = "";
+        if (row.status === "sent")
+          statusBadge =
+            '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20">Sent</span>';
+        else if (row.status === "failed")
+          statusBadge =
+            '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">Failed</span>';
+        else if (row.status === "processing")
+          statusBadge =
+            '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 animate-pulse">Sending...</span>';
+        else
+          statusBadge =
+            '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-500/10 text-gray-400 border border-gray-500/20">Pending</span>';
+
+        // Format Time
+        const date = new Date(row.updated_at + "Z"); // Append Z to ensure it's treated as UTC if not present
+        const timeStr = date.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
+
+        tr.innerHTML = `
+                 <td class="px-6 py-4 text-white font-medium">${row.email}</td>
+                 <td class="px-6 py-4 text-gray-400">${row.name || "-"}</td>
+                 <td class="px-6 py-4">${statusBadge}</td>
+                 <td class="px-6 py-4 text-gray-500 text-xs font-mono">${timeStr}</td>
+                 <td class="px-6 py-4 text-right">
+                   ${
+                     row.status === "failed" || row.status === "sent"
+                       ? `<button onclick="resendEmail('${row.email}')" class="text-blue-400 hover:text-white text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">Resend</button>`
+                       : ""
+                   }
+                 </td>
+               `;
+        tbody.appendChild(tr);
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function resendEmail(email) {
+    if (!confirm(`Resend to ${email}?`)) return;
+    try {
+      const res = await fetch(`/api/resend/${email}`, {
+        method: "POST",
+        headers,
+      });
+      if (res.ok) {
+        showToast("Queued", `Resending to ${email}`);
+        updateStats();
+      } else showToast("Error", "Failed to resend", true);
+    } catch (e) {
+      showToast("Error", "Network error", true);
+    }
+  }
+
+  // --- Settings & Init ---
+  async function loadSettings() {
+    try {
+      const res = await fetch("/api/settings", { headers });
+      if (res.status === 401) return;
+      const data = await res.json();
+
+      const setVal = (n, v) => {
+        const el = document.querySelector(`[name="${n}"]`);
+        if (el) el.value = v || "";
+      };
+      setVal("brevo_api_key", data.brevo_api_key);
+      setVal("sender_email", data.sender_email);
+      setVal("sender_name", data.sender_name);
+      setVal("subject", data.subject);
+      setVal("hourly_limit", data.hourly_limit);
+      setVal("daily_limit", data.daily_limit);
+
+      loadTemplates(data.selected_template);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function loadTemplates(selected) {
+    try {
+      const res = await fetch("/api/templates", { headers });
+      const data = await res.json();
+      const el = document.getElementById("selected_template");
+      el.innerHTML = '<option value="">Select template...</option>';
+      data.templates.forEach((t) => {
+        const opt = document.createElement("option");
+        opt.value = t;
+        opt.textContent = t;
+        if (t === selected) opt.selected = true;
+        el.appendChild(opt);
+      });
+    } catch (e) {}
+  }
+
+  // --- Uploads ---
+  const dropZone = document.getElementById("drop-zone");
+  const fileInput = document.getElementById("file-upload");
+
+  dropZone.addEventListener("click", () => fileInput.click());
+  dropZone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropZone.classList.add("border-blue-500");
+  });
+  dropZone.addEventListener("dragleave", () => {
+    dropZone.classList.remove("border-blue-500");
+  });
+  dropZone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropZone.classList.remove("border-blue-500");
+    if (e.dataTransfer.files[0]) handleUpload(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener("change", () => {
+    if (fileInput.files[0]) handleUpload(fileInput.files[0]);
+  });
+
+  async function handleUpload(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+    document.getElementById("upload-progress").classList.remove("hidden");
+
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers,
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast("Imported", data.message);
+        updateStats();
+      } else showToast("Failed", data.detail || "Error", true);
+    } catch (e) {
+      showToast("Error", "Network error", true);
+    } finally {
+      document.getElementById("upload-progress").classList.add("hidden");
+    }
+  }
+
+  async function uploadTemplate(input) {
+    if (!input.files[0]) return;
+    const formData = new FormData();
+    formData.append("file", input.files[0]);
+    try {
+      const res = await fetch("/api/templates/upload", {
+        method: "POST",
+        headers,
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast("Uploaded", data.filename);
+        loadTemplates(data.filename);
+      } else showToast("Failed", data.detail, true);
+    } catch (e) {
+      showToast("Error", "Network error", true);
+    }
+    input.value = "";
+  }
+
+  document
+    .getElementById("settings-form")
+    .addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        const res = await fetch("/api/settings", {
+          method: "POST",
+          headers,
+          body: new FormData(e.target),
+        });
+        if (res.ok) {
+          showToast("Saved", "Configuration updated");
+          updateStats();
+        } else showToast("Error", "Failed to save", true);
+      } catch (e) {
+        showToast("Error", "Network error", true);
+      }
+    });
+
+  function logout() {
+    localStorage.removeItem("token");
+    window.location.href = "/";
+  }
+
+  // Init
+  loadSettings();
+  updateStats();
+  setInterval(updateStats, 5000);
+</script>
+{% endblock %}
