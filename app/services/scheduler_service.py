@@ -150,7 +150,14 @@ class SchedulerService:
             template_str = self._get_email_template(settings.selected_template or "mail.html")
             try:
                 template = Template(template_str)
-                html_content = template.render(name=contact.name, email=contact.email)
+                # Prepare display name
+                display_name = contact.name
+                if display_name and display_name.lower() != "there":
+                    display_name = display_name.title()
+                else:
+                    display_name = "There"
+
+                html_content = template.render(name=display_name, email=contact.email)
             except Exception:
                 html_content = template_str 
             

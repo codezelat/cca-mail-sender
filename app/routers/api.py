@@ -71,15 +71,27 @@ async def upload_contacts(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Could not parse file: {e}")
 
-    # Validate columns
-    required = ['Email', 'Name']
-    if not all(col in df.columns for col in required):
-        raise HTTPException(status_code=400, detail=f"Missing columns. Required: {required}")
+    # Normalize columns to lowercase for matching
+    df.columns = df.columns.str.strip().str.lower()
+    
+    # Check for required columns (email matches, name matches)
+    # We want 'email' and 'name'
+    if 'email' not in df.columns:
+         raise HTTPException(status_code=400, detail="Missing 'Email' column")
+    
+    # 'name' is optional-ish but we enforce it based on previous logic, but let's be strict as per user request
+    if 'name' not in df.columns:
+         raise HTTPException(status_code=400, detail="Missing 'Name' column")
 
     count = 0
     for _, row in df.iterrows():
-        email = str(row['Email']).strip()
-        name = str(row['Name']).strip()
+        email = str(row['email']).strip()
+        # Handle various empty types (nan, None, empty string)
+        raw_name = row['name']
+        if pd.isna(raw_name) or str(raw_name).strip() == "":
+             name = "There"
+        else:
+             name = str(raw_name).strip()
         
         # Check if exists for this user
         exists = session.exec(select(Contact).where(Contact.email == email).where(Contact.user_id == user.id)).first()
