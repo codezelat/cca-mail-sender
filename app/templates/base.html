@@ -3,7 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Brevo Campaign Manager</title>
+    <title>CCA Campaign Manager</title>
+    <link
+      rel="icon"
+      href="https://cca.it.com/wp-content/uploads/2025/11/cca-logo-768x768.png"
+    />
     <script src="https://cdn.tailwindcss.com"></script>
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
@@ -37,6 +41,7 @@
   <body
     class="bg-gray-950 text-gray-100 min-h-screen selection:bg-blue-500 selection:text-white"
   >
+    {% block layout %}
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <!-- Header -->
       <header
@@ -44,7 +49,7 @@
       >
         <div>
           <h1 class="text-3xl font-bold tracking-tight text-white">
-            Campaign Manager
+            CCA Campaign Manager
           </h1>
           <p class="text-gray-400 mt-1">
             Brevo API Automation • Rate Limited • Optimized
@@ -62,6 +67,7 @@
 
       {% block content %}{% endblock %}
     </div>
+    {% endblock %}
 
     <!-- Toast Notification -->
     <div

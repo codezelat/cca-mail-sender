@@ -1,6 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Request, Depends, Form
 from fastapi.responses import HTMLResponse, JSONResponse
-from sqlmodel import Session, select
+from sqlmodel import Session, select, func
 import pandas as pd
 import io
 import os
@@ -192,11 +192,100 @@ async def resend_email(email: str, session: Session = Depends(get_session)):
     
     return {"status": "success", "message": f"Queued resend for {email}"}
 
+@router.get("/api/contacts")
+async def list_contacts(
+    page: int = 1, 
+    limit: int = 50, 
+    search: str = "", 
+    user: User = Depends(get_current_user), 
+    session: Session = Depends(get_session)
+):
+    query = select(Contact).where(Contact.user_id == user.id)
+    
+    if search:
+        search = search.lower()
+        query = query.where(
+            (Contact.email.contains(search)) | 
+            (Contact.name.contains(search))
+        )
+    
+    # Total count for pagination
+    total = session.exec(select(func.count()).select_from(query.subquery())).one()
+    
+    # Pagination
+    contacts = session.exec(
+        query.order_by(Contact.created_at.desc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+    ).all()
+    
+    return {
+        "contacts": [
+            {
+                "id": c.id,
+                "email": c.email,
+                "name": c.name,
+                "status": c.status,
+                "error_message": c.error_message,
+                "created_at": c.created_at.isoformat()
+            } for c in contacts
+        ],
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit
+    }
+
+@router.put("/api/contacts/{contact_id}")
+async def update_contact(
+    contact_id: int, 
+    name: str = Form(None), 
+    email: str = Form(None),
+    user: User = Depends(get_current_user), 
+    session: Session = Depends(get_session)
+):
+    contact = session.exec(select(Contact).where(Contact.id == contact_id).where(Contact.user_id == user.id)).first()
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
+        
+    if name is not None:
+        contact.name = name
+    if email is not None:
+        contact.email = email
+        
+    session.add(contact)
+    session.commit()
+    return {"status": "success", "message": "Contact updated"}
+
+@router.delete("/api/contacts/{contact_id}")
+async def delete_contact(
+    contact_id: int, 
+    user: User = Depends(get_current_user), 
+    session: Session = Depends(get_session)
+):
+    contact = session.exec(select(Contact).where(Contact.id == contact_id).where(Contact.user_id == user.id)).first()
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
+        
+    session.delete(contact)
+    session.commit()
+    return {"status": "success", "message": "Contact deleted"}
+
+@router.delete("/api/contacts")
+async def delete_all_contacts(
+    user: User = Depends(get_current_user), 
+    session: Session = Depends(get_session)
+):
+    # Bulk delete for this user
+    statement = select(Contact).where(Contact.user_id == user.id)
+    contacts = session.exec(statement).all()
+    
+    for contact in contacts:
+        session.delete(contact)
+        
+    session.commit()
+    return {"status": "success", "message": f"Deleted {len(contacts)} contacts"}
+
 @router.post("/api/clear-completed")
 async def clear_completed(session: Session = Depends(get_session)):
-    # Delete sent contacts to keep DB clean? Or just keep them?
-    # User said "delete from contacts" in Brevo, but local DB log "recorded in some panel you can use to see analytics". 
-    # So we KEEP them in local DB.
-    # But maybe we want to clear them to restart?
-    # I'll providing an endpoint just in case, or maybe just "Clear all".
+    # Legacy or unused currently
     pass

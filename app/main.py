@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
     logger.info("Stopping Scheduler...")
     scheduler.stop()
 
-app = FastAPI(title="Brevo Campaign Manager", lifespan=lifespan)
+app = FastAPI(title="CCA Campaign Manager", lifespan=lifespan)
 
 # Mount Routers
 app.include_router(pages.router)

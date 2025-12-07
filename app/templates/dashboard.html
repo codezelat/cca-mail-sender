@@ -1,19 +1,37 @@
-{% extends "base.html" %} {% block content %}
+{% extends "base.html" %} {% block layout %}
 <div class="min-h-screen bg-black/50">
   <!-- Top Navigation -->
   <nav
     class="border-b border-gray-800 bg-black/40 backdrop-blur-xl sticky top-0 z-40"
   >
     <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div
-          class="h-8 w-8 rounded-lg bg-gradient-to-tr from-purple-600 to-blue-600 flex items-center justify-center font-bold text-white shadow-lg shadow-purple-900/20"
-        >
-          B
+      <div class="flex items-center gap-8">
+        <div class="flex items-center gap-3">
+          <img
+            src="https://cca.it.com/wp-content/uploads/2025/11/cca-logo-768x768.png"
+            alt="Logo"
+            class="h-8 w-8 rounded-lg shadow-lg shadow-purple-900/20"
+          />
+          <span class="font-semibold text-sm tracking-wide text-gray-200"
+            >CCA Campaign Manager</span
+          >
         </div>
-        <span class="font-semibold text-sm tracking-wide text-gray-200"
-          >Campaign Manager</span
-        >
+        <div class="hidden md:flex items-center gap-6 text-sm font-medium">
+          <button
+            id="nav-dashboard"
+            onclick="switchView('dashboard')"
+            class="text-purple-400 font-semibold transition-colors"
+          >
+            Dashboard
+          </button>
+          <button
+            id="nav-contacts"
+            onclick="switchView('contacts')"
+            class="text-gray-400 hover:text-white transition-colors"
+          >
+            Contacts
+          </button>
+        </div>
       </div>
       <button
         onclick="logout()"
@@ -38,7 +56,8 @@
   </nav>
 
   <div class="max-w-7xl mx-auto px-6 py-8">
-    <div class="flex flex-col lg:flex-row gap-8">
+    <!-- View 1: Dashboard -->
+    <div id="view-dashboard" class="flex flex-col lg:flex-row gap-8">
       <!-- Left Column: Main Content -->
       <div class="flex-1 space-y-6">
         <!-- Quick Stats Row -->
@@ -141,10 +160,10 @@
                 <span class="text-sm text-gray-400">Hourly Rate</span>
                 <div class="text-right">
                   <span id="stat-used-hour" class="text-lg font-bold text-white"
-                    >{{ settings.emails_sent_this_hour }}</span
+                    >0</span
                   >
                   <span class="text-sm text-gray-600 font-medium"
-                    >/ {{ settings.hourly_limit }}</span
+                    >/ <span id="stat-limit-hour">20</span></span
                   >
                 </div>
               </div>
@@ -163,12 +182,12 @@
                 <span class="text-sm text-gray-400">Daily Quota</span>
                 <div class="text-right">
                   <span
-                    id="stat-sent-today"
+                    id="stat-used-today"
                     class="text-lg font-bold text-white"
-                    >{{ settings.emails_sent_today }}</span
+                    >0</span
                   >
                   <span class="text-sm text-gray-600 font-medium"
-                    >/ {{ settings.daily_limit }}</span
+                    >/ <span id="stat-limit-today">300</span></span
                   >
                 </div>
               </div>
@@ -449,6 +468,166 @@
         </div>
       </div>
     </div>
+
+    <!-- View 2: Contact Manager (Hidden by default) -->
+    <div id="view-contacts" class="hidden space-y-6">
+      <div
+        class="bg-gray-900/40 border border-white/5 rounded-xl border-gray-800 overflow-hidden backdrop-blur-sm"
+      >
+        <!-- Toolbar -->
+        <div
+          class="px-6 py-4 border-b border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 bg-white/[0.02]"
+        >
+          <div class="relative w-full md:w-64">
+            <input
+              type="text"
+              id="contact-search"
+              placeholder="Search contacts..."
+              class="w-full bg-black/50 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition-all"
+              oninput="debounceSearch()"
+            />
+            <svg
+              class="w-4 h-4 text-gray-500 absolute left-3 top-3"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              ></path>
+            </svg>
+          </div>
+          <div class="flex items-center gap-3">
+            <button
+              onclick="loadContacts()"
+              class="p-2 text-gray-400 hover:text-white transition-colors bg-white/5 rounded-lg border border-white/5"
+            >
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                ></path>
+              </svg>
+            </button>
+            <button
+              onclick="deleteAllContacts()"
+              class="text-sm bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 px-4 py-2 rounded-lg font-medium transition-all"
+            >
+              Delete All
+            </button>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="overflow-x-auto min-h-[400px]">
+          <table class="w-full text-left text-sm">
+            <thead
+              class="bg-gray-900/50 text-gray-500 uppercase font-medium text-xs border-b border-white/5"
+            >
+              <tr>
+                <th class="px-6 py-3 font-medium">Name</th>
+                <th class="px-6 py-3 font-medium">Email</th>
+                <th class="px-6 py-3 font-medium">Status</th>
+                <th class="px-6 py-3 font-medium text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5" id="contacts-table-body">
+              <tr>
+                <td colspan="4" class="px-6 py-8 text-center text-gray-600">
+                  Loading...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div
+          class="px-6 py-4 border-t border-white/5 flex justify-between items-center bg-white/[0.02]"
+        >
+          <span class="text-sm text-gray-500" id="pagination-info"
+            >Page 1 of 1</span
+          >
+          <div class="flex gap-2">
+            <button
+              id="btn-prev"
+              onclick="changePage(-1)"
+              class="px-3 py-1 text-sm bg-white/5 hover:bg-white/10 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <button
+              id="btn-next"
+              onclick="changePage(1)"
+              class="px-3 py-1 text-sm bg-white/5 hover:bg-white/10 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div
+  id="edit-modal"
+  class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300"
+>
+  <div
+    class="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-md shadow-2xl transform scale-95 transition-transform duration-300"
+    id="edit-modal-content"
+  >
+    <h3 class="text-lg font-semibold text-white mb-4">Edit Contact</h3>
+    <form id="edit-form" class="space-y-4">
+      <input type="hidden" name="contact_id" id="edit-id" />
+      <div>
+        <label class="block text-sm font-medium text-gray-400 mb-1">Name</label>
+        <input
+          type="text"
+          name="name"
+          id="edit-name"
+          class="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-blue-500 focus:outline-none"
+        />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-400 mb-1"
+          >Email</label
+        >
+        <input
+          type="email"
+          name="email"
+          id="edit-email"
+          class="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-blue-500 focus:outline-none"
+        />
+      </div>
+      <div class="flex justify-end gap-3 pt-4">
+        <button
+          type="button"
+          onclick="closeEditModal()"
+          class="px-4 py-2 text-sm text-gray-400 hover:text-white"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium"
+        >
+          Save Changes
+        </button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -463,6 +642,44 @@
   const token = localStorage.getItem("token");
   if (!token) window.location.href = "/login";
   const headers = { Authorization: `Bearer ${token}` };
+
+  // --- State ---
+  let currentPage = 1;
+  let currentLimit = 50;
+  let currentSearch = "";
+  let searchTimeout = null;
+
+  // --- Navigation ---
+  function switchView(view) {
+    document.getElementById("view-dashboard").classList.add("hidden");
+    document.getElementById("view-contacts").classList.add("hidden");
+    document
+      .getElementById("nav-dashboard")
+      .classList.remove("text-purple-400", "font-semibold");
+    document
+      .getElementById("nav-contacts")
+      .classList.remove("text-purple-400", "font-semibold");
+    document.getElementById("nav-dashboard").classList.add("text-gray-400");
+    document.getElementById("nav-contacts").classList.add("text-gray-400");
+
+    if (view === "dashboard") {
+      document.getElementById("view-dashboard").classList.remove("hidden");
+      document
+        .getElementById("nav-dashboard")
+        .classList.add("text-purple-400", "font-semibold");
+      document
+        .getElementById("nav-dashboard")
+        .classList.remove("text-gray-400");
+      updateStats(); // Refresh stats
+    } else {
+      document.getElementById("view-contacts").classList.remove("hidden");
+      document
+        .getElementById("nav-contacts")
+        .classList.add("text-purple-400", "font-semibold");
+      document.getElementById("nav-contacts").classList.remove("text-gray-400");
+      loadContacts(); // Load Data
+    }
+  }
 
   // --- Toast System ---
   function showToast(title, message, isError = false) {
@@ -510,9 +727,15 @@
 
       // Limits View
       document.getElementById("stat-used-hour").textContent =
-        data.emails_sent_this_hour;
-      document.getElementById("stat-sent-today").textContent =
+        document.getElementById("stat-used-hour").textContent =
+          data.emails_sent_this_hour;
+      document.getElementById("stat-used-today").textContent =
         data.emails_sent_today;
+
+      document.getElementById("stat-limit-hour").textContent =
+        data.hourly_limit;
+      document.getElementById("stat-limit-today").textContent =
+        data.daily_limit;
 
       // Bars
       const pctHour = Math.min(
@@ -563,7 +786,9 @@
             '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-500/10 text-gray-400 border border-gray-500/20">Pending</span>';
 
         // Format Time
-        const date = new Date(row.updated_at + "Z"); // Append Z to ensure it's treated as UTC if not present
+        const date = new Date(
+          row.updated_at.endsWith("Z") ? row.updated_at : row.updated_at + "Z"
+        );
         const timeStr = date.toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
@@ -650,22 +875,24 @@
   const dropZone = document.getElementById("drop-zone");
   const fileInput = document.getElementById("file-upload");
 
-  dropZone.addEventListener("click", () => fileInput.click());
-  dropZone.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    dropZone.classList.add("border-blue-500");
-  });
-  dropZone.addEventListener("dragleave", () => {
-    dropZone.classList.remove("border-blue-500");
-  });
-  dropZone.addEventListener("drop", (e) => {
-    e.preventDefault();
-    dropZone.classList.remove("border-blue-500");
-    if (e.dataTransfer.files[0]) handleUpload(e.dataTransfer.files[0]);
-  });
-  fileInput.addEventListener("change", () => {
-    if (fileInput.files[0]) handleUpload(fileInput.files[0]);
-  });
+  if (dropZone && fileInput) {
+    dropZone.addEventListener("click", () => fileInput.click());
+    dropZone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropZone.classList.add("border-blue-500");
+    });
+    dropZone.addEventListener("dragleave", () => {
+      dropZone.classList.remove("border-blue-500");
+    });
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("border-blue-500");
+      if (e.dataTransfer.files[0]) handleUpload(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files[0]) handleUpload(fileInput.files[0]);
+    });
+  }
 
   async function handleUpload(file) {
     const formData = new FormData();
@@ -682,6 +909,12 @@
       if (res.ok) {
         showToast("Imported", data.message);
         updateStats();
+        // If in contacts view, reload contacts
+        if (
+          !document.getElementById("view-contacts").classList.contains("hidden")
+        ) {
+          loadContacts();
+        }
       } else showToast("Failed", data.detail || "Error", true);
     } catch (e) {
       showToast("Error", "Network error", true);
@@ -730,6 +963,159 @@
       }
     });
 
+  // --- Contact Management ---
+  function debounceSearch() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      currentSearch = document.getElementById("contact-search").value;
+      currentPage = 1;
+      loadContacts();
+    }, 300);
+  }
+
+  function changePage(delta) {
+    currentPage += delta;
+    loadContacts();
+  }
+
+  async function loadContacts() {
+    const tbody = document.getElementById("contacts-table-body");
+
+    // Show Loading
+    // tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-gray-600">Loading...</td></tr>`;
+
+    try {
+      const url = `/api/contacts?page=${currentPage}&limit=${currentLimit}&search=${encodeURIComponent(
+        currentSearch
+      )}`;
+      const res = await fetch(url, { headers });
+      const data = await res.json();
+
+      tbody.innerHTML = "";
+      if (data.contacts.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-gray-600 text-sm">No contacts found</td></tr>`;
+      } else {
+        data.contacts.forEach((c) => {
+          const tr = document.createElement("tr");
+          tr.className = "hover:bg-white/[0.02] transition-colors group";
+
+          let statusColor = "text-gray-400";
+          if (c.status === "sent") statusColor = "text-green-400";
+          if (c.status === "failed") statusColor = "text-red-400";
+
+          tr.innerHTML = `
+                        <td class="px-6 py-4 text-white font-medium">${
+                          c.name || "-"
+                        }</td>
+                        <td class="px-6 py-4 text-gray-400">${c.email}</td>
+                        <td class="px-6 py-4 uppercase text-xs font-semibold ${statusColor}">${
+            c.status
+          }</td>
+                        <td class="px-6 py-4 text-right gap-2 flex justify-end">
+                            <button onclick="openEditModal(${
+                              c.id
+                            }, '${c.name.replace(/'/g, "\\'")}', '${
+            c.email
+          }')" class="text-blue-400 hover:text-white px-2 py-1 hover:bg-white/10 rounded transition-colors">Edit</button>
+                            <button onclick="deleteContact(${
+                              c.id
+                            })" class="text-red-400 hover:text-white px-2 py-1 hover:bg-red-500/10 rounded transition-colors">Delete</button>
+                        </td>
+                    `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      // Pagination Controls
+      document.getElementById("pagination-info").textContent = `Page ${
+        data.page
+      } of ${data.pages || 1} (${data.total} total)`;
+      document.getElementById("btn-prev").disabled = data.page <= 1;
+      document.getElementById("btn-next").disabled = data.page >= data.pages;
+    } catch (e) {
+      console.error(e);
+      tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-red-400 text-sm">Error loading contacts</td></tr>`;
+    }
+  }
+
+  // Modal Logic
+  function openEditModal(id, name, email) {
+    document.getElementById("edit-id").value = id;
+    document.getElementById("edit-name").value = name;
+    document.getElementById("edit-email").value = email;
+    const modal = document.getElementById("edit-modal");
+    modal.classList.remove("hidden");
+    requestAnimationFrame(() => modal.classList.remove("opacity-0"));
+    document.getElementById("edit-modal-content").classList.remove("scale-95");
+  }
+
+  function closeEditModal() {
+    const modal = document.getElementById("edit-modal");
+    modal.classList.add("opacity-0");
+    document.getElementById("edit-modal-content").classList.add("scale-95");
+    setTimeout(() => modal.classList.add("hidden"), 300);
+  }
+
+  document.getElementById("edit-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const id = document.getElementById("edit-id").value;
+    const formData = new FormData(e.target);
+
+    try {
+      const res = await fetch(`/api/contacts/${id}`, {
+        method: "PUT",
+        headers,
+        body: formData,
+      });
+      if (res.ok) {
+        showToast("Success", "Contact updated");
+        closeEditModal();
+        loadContacts();
+      } else {
+        showToast("Error", "Update failed", true);
+      }
+    } catch (e) {
+      showToast("Error", "Network error", true);
+    }
+  });
+
+  async function deleteContact(id) {
+    if (!confirm("Delete this contact?")) return;
+    try {
+      const res = await fetch(`/api/contacts/${id}`, {
+        method: "DELETE",
+        headers,
+      });
+      if (res.ok) {
+        showToast("Deleted", "Contact removed");
+        loadContacts();
+        updateStats();
+      } else showToast("Error", "Delete failed", true);
+    } catch (e) {
+      showToast("Error", "Network error", true);
+    }
+  }
+
+  async function deleteAllContacts() {
+    if (
+      !confirm(
+        "WARNING: This will delete ALL your contacts. This cannot be undone."
+      )
+    )
+      return;
+    try {
+      const res = await fetch(`/api/contacts`, { method: "DELETE", headers });
+      const data = await res.json();
+      if (res.ok) {
+        showToast("Cleared", data.message);
+        loadContacts();
+        updateStats();
+      } else showToast("Error", "Process failed", true);
+    } catch (e) {
+      showToast("Error", "Network error", true);
+    }
+  }
+
   function logout() {
     localStorage.removeItem("token");
     window.location.href = "/";
@@ -737,7 +1123,7 @@
 
   // Init
   loadSettings();
-  updateStats();
+  switchView("dashboard"); // Start on dashboard
   setInterval(updateStats, 5000);
 </script>
-{% endblock %}
+{% endblock %} ```
