@@ -204,12 +204,35 @@
 
         <!-- Activities -->
         <div
-          class="bg-gray-900/40 border border-white/5 rounded-xl overflow-hidden backdrop-blur-sm flex-1 min-h-[400px]"
+          class="bg-gray-900/40 border border-white/5 rounded-xl overflow-hidden backdrop-blur-sm flex-1 min-h-[400px] flex flex-col"
         >
           <div
             class="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02]"
           >
-            <h3 class="text-base font-semibold text-white">Live Activity</h3>
+            <div class="flex items-center gap-4">
+              <h3 class="text-base font-semibold text-white">Live Activity</h3>
+              <div class="flex items-center gap-2 text-xs">
+                <select
+                  id="activity-sort"
+                  onchange="changeActivitySort()"
+                  class="bg-gray-800 text-gray-300 border border-gray-700 rounded px-2 py-1 focus:outline-none focus:border-purple-500"
+                >
+                  <option value="status_priority">Status Priority</option>
+                  <option value="recent">Recently Updated</option>
+                  <option value="newest">Newest First</option>
+                </select>
+                <select
+                  id="activity-limit"
+                  onchange="changeActivityLimit()"
+                  class="bg-gray-800 text-gray-300 border border-gray-700 rounded px-2 py-1 focus:outline-none focus:border-purple-500"
+                >
+                  <option value="25">25 per page</option>
+                  <option value="50" selected>50 per page</option>
+                  <option value="100">100 per page</option>
+                  <option value="200">200 per page</option>
+                </select>
+              </div>
+            </div>
             <div class="flex items-center gap-2">
               <span class="relative flex h-2 w-2">
                 <span
@@ -225,7 +248,7 @@
               >
             </div>
           </div>
-          <div class="overflow-x-auto">
+          <div class="overflow-x-auto flex-1">
             <table class="w-full text-left text-sm">
               <thead
                 class="bg-gray-900/50 text-gray-500 uppercase font-medium text-xs border-b border-white/5"
@@ -247,6 +270,36 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+          <!-- Pagination Controls -->
+          <div
+            class="px-6 py-4 border-t border-white/5 bg-white/[0.02] flex items-center justify-between"
+          >
+            <div class="text-sm text-gray-400">
+              <span id="activity-showing">Showing 0 of 0</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <button
+                id="activity-prev"
+                onclick="changeActivityPage(-1)"
+                class="px-3 py-1 text-xs font-medium text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled
+              >
+                Previous
+              </button>
+              <span class="text-xs text-gray-500 px-2">
+                Page <span id="activity-current-page">1</span> of
+                <span id="activity-total-pages">1</span>
+              </span>
+              <button
+                id="activity-next"
+                onclick="changeActivityPage(1)"
+                class="px-3 py-1 text-xs font-medium text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -710,6 +763,11 @@
   }
 
   // --- Stats & Activity ---
+  // Activity Pagination State
+  let activityPage = 1;
+  let activityLimit = 50;
+  let activitySort = "status_priority";
+
   async function updateStats() {
     try {
       const response = await fetch("/api/stats", { headers });
@@ -757,17 +815,33 @@
 
   async function updateActivity() {
     try {
-      const res = await fetch("/api/activity", { headers });
+      const params = new URLSearchParams({
+        page: activityPage,
+        limit: activityLimit,
+        sort_by: activitySort,
+      });
+      console.log("Fetching activity with:", {
+        page: activityPage,
+        limit: activityLimit,
+        sort_by: activitySort,
+      });
+      const res = await fetch(`/api/activity?${params}`, { headers });
       const data = await res.json();
       const tbody = document.getElementById("activity-table-body");
       tbody.innerHTML = "";
 
-      if (data.length === 0) {
+      if (!data.contacts || data.contacts.length === 0) {
         tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-gray-600 text-sm">No recent activity</td></tr>`;
+        document.getElementById("activity-showing").textContent =
+          "Showing 0 of 0";
+        document.getElementById("activity-current-page").textContent = "1";
+        document.getElementById("activity-total-pages").textContent = "1";
+        document.getElementById("activity-prev").disabled = true;
+        document.getElementById("activity-next").disabled = true;
         return;
       }
 
-      data.forEach((row) => {
+      data.contacts.forEach((row) => {
         const tr = document.createElement("tr");
         tr.className = "hover:bg-white/[0.02] transition-colors group";
 
@@ -785,11 +859,21 @@
           statusBadge =
             '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-500/10 text-gray-400 border border-gray-500/20">Pending</span>';
 
-        // Format Time
-        const date = new Date(
-          row.updated_at.endsWith("Z") ? row.updated_at : row.updated_at + "Z"
-        );
-        const timeStr = date.toLocaleTimeString([], {
+        // Format Time - show different timestamp based on sort
+        const sortBy = document.getElementById("activity-sort").value;
+        let displayDate;
+        if (sortBy === "newest") {
+          displayDate = new Date(
+            row.created_at.endsWith("Z") ? row.created_at : row.created_at + "Z"
+          );
+        } else {
+          displayDate = new Date(
+            row.updated_at.endsWith("Z") ? row.updated_at : row.updated_at + "Z"
+          );
+        }
+        const timeStr = displayDate.toLocaleString([], {
+          month: "2-digit",
+          day: "2-digit",
           hour: "2-digit",
           minute: "2-digit",
           second: "2-digit",
@@ -810,10 +894,44 @@
                `;
         tbody.appendChild(tr);
       });
+
+      // Update pagination info
+      const start = (data.page - 1) * data.limit + 1;
+      const end = Math.min(data.page * data.limit, data.total);
+      document.getElementById(
+        "activity-showing"
+      ).textContent = `Showing ${start}-${end} of ${data.total}`;
+      document.getElementById("activity-current-page").textContent = data.page;
+      document.getElementById("activity-total-pages").textContent = data.pages;
+
+      // Update button states
+      document.getElementById("activity-prev").disabled = data.page <= 1;
+      document.getElementById("activity-next").disabled =
+        data.page >= data.pages;
     } catch (e) {
       console.error(e);
     }
   }
+
+  window.changeActivityPage = function (delta) {
+    activityPage += delta;
+    if (activityPage < 1) activityPage = 1;
+    updateActivity();
+  };
+
+  window.changeActivitySort = function () {
+    activitySort = document.getElementById("activity-sort").value;
+    activityPage = 1; // Reset to first page when sorting changes
+    console.log("Sort changed to:", activitySort);
+    updateActivity();
+  };
+
+  window.changeActivityLimit = function () {
+    activityLimit = parseInt(document.getElementById("activity-limit").value);
+    activityPage = 1; // Reset to first page when limit changes
+    console.log("Limit changed to:", activityLimit);
+    updateActivity();
+  };
 
   async function resendEmail(email) {
     if (!confirm(`Resend to ${email}?`)) return;
@@ -893,6 +1011,14 @@
       if (fileInput.files[0]) handleUpload(fileInput.files[0]);
     });
   }
+
+  // Activity controls event listeners
+  document
+    .getElementById("activity-sort")
+    ?.addEventListener("change", changeActivitySort);
+  document
+    .getElementById("activity-limit")
+    ?.addEventListener("change", changeActivityLimit);
 
   async function handleUpload(file) {
     const formData = new FormData();
