@@ -78,7 +78,7 @@ class TemplateDraftPayload(BaseModel):
     preheader: str = ""
     design_json: Dict[str, Any] = Field(default_factory=dict)
     html_source: str = ""
-    schema_json: list[dict[str, Any]] = Field(default_factory=list)
+    merge_fields_schema: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class TemplateTogglePayload(BaseModel):
@@ -392,7 +392,7 @@ async def update_template_draft(
     draft.preheader = payload.preheader
     draft.design_json = payload.design_json or {}
     draft.html_source = payload.html_source or ""
-    draft.schema_json = ensure_schema(payload.schema_json)
+    draft.merge_fields_schema = ensure_schema(payload.merge_fields_schema)
     draft.updated_at = datetime.utcnow()
 
     errors, schema, compiled_html = validate_template_version_data(
@@ -401,9 +401,9 @@ async def update_template_draft(
         draft.preheader,
         draft.design_json,
         draft.html_source,
-        draft.schema_json,
+        draft.merge_fields_schema,
     )
-    draft.schema_json = schema
+    draft.merge_fields_schema = schema
     draft.compiled_html = compiled_html
 
     session.add(template)
@@ -609,7 +609,7 @@ async def list_import_sheets(
 ):
     import_session = require_import_session(session, user, import_session_id)
     version = session.get(EmailTemplateVersion, import_session.template_version_id)
-    return {"status": "success", "import_session": serialize_import_session(import_session, version.schema_json if version else [])}
+    return {"status": "success", "import_session": serialize_import_session(import_session, version.merge_fields_schema if version else [])}
 
 
 @router.post("/api/imports/{import_session_id}/mapping")

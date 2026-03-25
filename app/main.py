@@ -12,6 +12,12 @@ from app.services.scheduler_service import SchedulerService
 from app.services.template_service import ensure_default_template_for_user
 import logging
 
+DATA_DIR = "data"
+PUBLIC_ASSETS_DIR = os.path.join(DATA_DIR, "public_assets")
+
+os.makedirs(DATA_DIR, exist_ok=True)
+os.makedirs(PUBLIC_ASSETS_DIR, exist_ok=True)
+
 # Setup Logger
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -25,7 +31,7 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Initializing Database...")
     create_db_and_tables()
-    os.makedirs(os.path.join("data", "public_assets"), exist_ok=True)
+    os.makedirs(PUBLIC_ASSETS_DIR, exist_ok=True)
 
     logger.info("Bootstrapping templates...")
     with Session(engine) as session:
@@ -53,7 +59,7 @@ app.include_router(auth_routes.router)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount(
     "/public-assets",
-    StaticFiles(directory=os.path.join("data", "public_assets")),
+    StaticFiles(directory=PUBLIC_ASSETS_DIR),
     name="public-assets",
 )
 

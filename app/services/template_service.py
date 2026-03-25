@@ -600,10 +600,10 @@ def validate_template_version_data(
     preheader: str,
     design_json: Optional[Dict[str, Any]],
     html_source: Optional[str],
-    schema_json: Optional[Iterable[Dict[str, Any]]],
+    merge_fields_schema: Optional[Iterable[Dict[str, Any]]],
 ) -> tuple[list[str], list[dict[str, Any]], str]:
     errors: List[str] = []
-    schema = ensure_schema(schema_json)
+    schema = ensure_schema(merge_fields_schema)
     errors.extend(validate_schema(schema))
 
     if not subject or not subject.strip():
@@ -630,7 +630,7 @@ def serialize_version(version: Optional[EmailTemplateVersion]) -> Optional[Dict[
         "design_json": version.design_json or {},
         "html_source": version.html_source or "",
         "compiled_html": version.compiled_html or "",
-        "schema_json": ensure_schema(version.schema_json),
+        "merge_fields_schema": ensure_schema(version.merge_fields_schema),
         "thumbnail": version.thumbnail,
         "published_at": version.published_at.isoformat() if version.published_at else None,
         "created_at": version.created_at.isoformat(),
@@ -683,7 +683,9 @@ def get_or_create_draft_version(
             design_json=copy.deepcopy(latest_published.design_json or {}),
             html_source=latest_published.html_source,
             compiled_html=latest_published.compiled_html,
-            schema_json=copy.deepcopy(ensure_schema(latest_published.schema_json)),
+            merge_fields_schema=copy.deepcopy(
+                ensure_schema(latest_published.merge_fields_schema)
+            ),
             thumbnail=latest_published.thumbnail,
         )
     else:
@@ -698,7 +700,7 @@ def get_or_create_draft_version(
             compiled_html=compile_builder_design(
                 build_default_builder_design(), DEFAULT_TEMPLATE_PREHEADER
             ),
-            schema_json=ensure_schema([]),
+            merge_fields_schema=ensure_schema([]),
         )
 
     session.add(draft)
@@ -784,7 +786,7 @@ def create_template(
             "" if editor_mode == "builder" else load_legacy_template_source(None),
             DEFAULT_TEMPLATE_PREHEADER,
         ),
-        schema_json=ensure_schema([]),
+        merge_fields_schema=ensure_schema([]),
     )
     session.add(draft)
     session.commit()
@@ -806,7 +808,7 @@ def create_html_import_template(
     normalized_html = normalize_template_source(html_source)
     draft.editor_mode = "code"
     draft.html_source = normalized_html
-    draft.schema_json = schema_from_source(normalized_html)
+    draft.merge_fields_schema = schema_from_source(normalized_html)
     draft.compiled_html = normalized_html
     draft.updated_at = datetime.utcnow()
     session.add(draft)
@@ -829,12 +831,12 @@ def publish_template(
         draft.preheader,
         draft.design_json,
         draft.html_source,
-        draft.schema_json,
+        draft.merge_fields_schema,
     )
     if errors:
         raise ValueError("; ".join(errors))
 
-    draft.schema_json = schema
+    draft.merge_fields_schema = schema
     draft.compiled_html = compiled_html
     draft.status = "published"
     draft.published_at = datetime.utcnow()
@@ -952,7 +954,7 @@ def ensure_default_template_for_user(session: Session, user: User):
         preheader=DEFAULT_TEMPLATE_PREHEADER,
         html_source=legacy_html,
         compiled_html=legacy_html,
-        schema_json=schema_from_source(legacy_html),
+        merge_fields_schema=schema_from_source(legacy_html),
         published_at=datetime.utcnow(),
     )
     session.add(published)
@@ -1012,7 +1014,9 @@ def duplicate_template(session: Session, user: User, template: EmailTemplate) ->
             design_json=copy.deepcopy(version.design_json or {}),
             html_source=version.html_source,
             compiled_html=version.compiled_html,
-            schema_json=copy.deepcopy(ensure_schema(version.schema_json)),
+            merge_fields_schema=copy.deepcopy(
+                ensure_schema(version.merge_fields_schema)
+            ),
             thumbnail=version.thumbnail,
             published_at=version.published_at,
         )

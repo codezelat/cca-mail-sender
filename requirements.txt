@@ -11,3 +11,4 @@ openpyxl
 python-dotenv
 httpx
 aiofiles
+pytest

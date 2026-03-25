@@ -52,8 +52,10 @@ def is_valid_email(value: str) -> bool:
     return bool(EMAIL_RE.match(value or ""))
 
 
-def list_mappable_fields(schema_json: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    schema = ensure_schema(schema_json)
+def list_mappable_fields(
+    merge_fields_schema: Iterable[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    schema = ensure_schema(merge_fields_schema)
     fields = [
         {
             "key": "email",
@@ -88,13 +90,15 @@ def detect_duplicate_headers(columns: Iterable[str]) -> List[str]:
     return duplicates
 
 
-def suggest_mapping(columns: Iterable[str], schema_json: Iterable[Dict[str, Any]]) -> Tuple[Dict[str, str], List[str]]:
+def suggest_mapping(
+    columns: Iterable[str], merge_fields_schema: Iterable[Dict[str, Any]]
+) -> Tuple[Dict[str, str], List[str]]:
     mapping: Dict[str, str] = {}
     warnings: List[str] = []
     columns = list(columns)
     normalized_columns = {column: normalize_header(column) for column in columns}
 
-    for field in list_mappable_fields(schema_json):
+    for field in list_mappable_fields(merge_fields_schema):
         key = field["key"]
         aliases = HEADER_ALIASES.get(key, set()) | {normalize_header(key)}
         exact_matches = [column for column, normalized in normalized_columns.items() if normalized in aliases]
@@ -167,7 +171,9 @@ def create_import_session(
         raise ValueError(f"Import file exceeds the {MAX_IMPORT_ROWS} row limit.")
 
     duplicate_headers = detect_duplicate_headers(frame.columns)
-    suggested_mapping, warnings = suggest_mapping(frame.columns, template_version.schema_json)
+    suggested_mapping, warnings = suggest_mapping(
+        frame.columns, template_version.merge_fields_schema
+    )
 
     import_session = ImportSession(
         user_id=user.id or 0,
@@ -187,10 +193,12 @@ def create_import_session(
     session.commit()
     session.refresh(import_session)
 
-    return serialize_import_session(import_session, template_version.schema_json)
+    return serialize_import_session(import_session, template_version.merge_fields_schema)
 
 
-def serialize_import_session(import_session: ImportSession, schema_json: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
+def serialize_import_session(
+    import_session: ImportSession, merge_fields_schema: Iterable[Dict[str, Any]]
+) -> Dict[str, Any]:
     validation = import_session.validation_json or {}
     return {
         "id": import_session.id,
@@ -201,8 +209,12 @@ def serialize_import_session(import_session: ImportSession, schema_json: Iterabl
         "sheet_names": import_session.sheet_names_json or [],
         "detected_columns": import_session.detected_columns_json or [],
         "mapping": import_session.mapping_json or {},
-        "required_fields": [field for field in list_mappable_fields(schema_json) if field.get("required")],
-        "mappable_fields": list_mappable_fields(schema_json),
+        "required_fields": [
+            field
+            for field in list_mappable_fields(merge_fields_schema)
+            if field.get("required")
+        ],
+        "mappable_fields": list_mappable_fields(merge_fields_schema),
         "warnings": validation.get("warnings", []),
         "duplicate_headers": validation.get("duplicate_headers", []),
         "sample_rows": import_session.sample_rows_json or [],
@@ -225,7 +237,11 @@ def save_mapping(
     if len(mapped_columns) != len(set(mapped_columns)):
         raise ValueError("Each column can only map to one template field.")
 
-    required_fields = [field["key"] for field in list_mappable_fields(template_version.schema_json) if field.get("required")]
+    required_fields = [
+        field["key"]
+        for field in list_mappable_fields(template_version.merge_fields_schema)
+        if field.get("required")
+    ]
     for required_key in required_fields:
         if not mapping.get(required_key):
             raise ValueError(f"Field '{required_key}' must be mapped before validation.")
@@ -233,7 +249,7 @@ def save_mapping(
     import_session.mapping_json = mapping
     import_session.status = "mapped"
     import_session.updated_at = datetime.utcnow()
-    return serialize_import_session(import_session, template_version.schema_json)
+    return serialize_import_session(import_session, template_version.merge_fields_schema)
 
 
 def _effective_row_is_empty(row_payload: Dict[str, Any]) -> bool:
@@ -304,7 +320,7 @@ def evaluate_import_session(
     provisional_rows: List[Dict[str, Any]] = []
     custom_required_fields = [
         field["key"]
-        for field in list_mappable_fields(template_version.schema_json)
+        for field in list_mappable_fields(template_version.merge_fields_schema)
         if field["key"] not in {"email", "name"} and field.get("required")
     ]
 
@@ -465,7 +481,7 @@ def validate_import_session(
     session.commit()
     session.refresh(import_session)
 
-    data = serialize_import_session(import_session, template_version.schema_json)
+    data = serialize_import_session(import_session, template_version.merge_fields_schema)
     data["row_errors_preview"] = result["row_errors"][:20]
     return data
 

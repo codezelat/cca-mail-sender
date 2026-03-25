@@ -61,6 +61,13 @@ Built with **FastAPI**, **SQLModel**, and a modern **Tailwind CSS** dashboard.
     ```
     The server will start at `http://127.0.0.1:8000`.
 
+    If `--reload` fails in a restricted environment because the file watcher cannot
+    attach, use:
+
+    ```bash
+    WATCHFILES_FORCE_POLLING=1 uvicorn app.main:app --reload
+    ```
+
 ## 📖 Usage Guide
 
 1.  **Sign Up**: Create a new account at `/signup`.

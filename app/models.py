@@ -96,8 +96,8 @@ class EmailTemplateVersion(SQLModel, table=True):
     )
     html_source: Optional[str] = Field(default=None, sa_column=Column(Text))
     compiled_html: Optional[str] = Field(default=None, sa_column=Column(Text))
-    schema_json: List[Dict[str, Any]] = Field(
-        default_factory=list, sa_column=Column(JSON)
+    merge_fields_schema: List[Dict[str, Any]] = Field(
+        default_factory=list, sa_column=Column("schema_json", JSON)
     )
     thumbnail: Optional[str] = None
     published_at: Optional[datetime] = None
