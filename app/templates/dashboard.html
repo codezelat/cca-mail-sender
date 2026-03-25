@@ -1,1258 +1,960 @@
 {% extends "base.html" %} {% block layout %}
-<div class="min-h-screen bg-black/50">
-  <!-- Top Navigation -->
+<div class="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.12),_transparent_30%),radial-gradient(circle_at_80%_20%,_rgba(20,184,166,0.10),_transparent_25%),#020617]">
   <nav
-    class="border-b border-gray-800 bg-black/40 backdrop-blur-xl sticky top-0 z-40"
+    class="sticky top-0 z-50 border-b border-white/10 bg-slate-950/80 backdrop-blur-xl"
   >
-    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+    <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
       <div class="flex items-center gap-8">
         <div class="flex items-center gap-3">
           <img
             src="/static/logo.png"
             alt="Logo"
-            class="h-8 w-8 rounded-lg shadow-lg shadow-purple-900/20"
+            class="h-9 w-9 rounded-xl border border-white/10 bg-white/5 p-1 shadow-[0_0_40px_rgba(59,130,246,0.15)]"
           />
-          <span class="font-semibold text-sm tracking-wide text-gray-200"
-            >CCA Campaign Manager</span
-          >
+          <div>
+            <div class="text-sm font-semibold tracking-wide text-slate-100">
+              CCA Campaign Manager
+            </div>
+            <div class="text-xs text-slate-500">
+              Production campaign workspace
+            </div>
+          </div>
         </div>
-        <div class="hidden md:flex items-center gap-6 text-sm font-medium">
+        <div class="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] p-1 md:flex">
           <button
-            id="nav-dashboard"
-            onclick="switchView('dashboard')"
-            class="text-purple-400 font-semibold transition-colors"
+            data-view-trigger="dashboard"
+            class="view-trigger rounded-full px-4 py-2 text-sm font-medium text-slate-300 transition hover:text-white"
           >
             Dashboard
           </button>
           <button
-            id="nav-contacts"
-            onclick="switchView('contacts')"
-            class="text-gray-400 hover:text-white transition-colors"
+            data-view-trigger="templates"
+            class="view-trigger rounded-full px-4 py-2 text-sm font-medium text-slate-300 transition hover:text-white"
+          >
+            Templates
+          </button>
+          <button
+            data-view-trigger="contacts"
+            class="view-trigger rounded-full px-4 py-2 text-sm font-medium text-slate-300 transition hover:text-white"
           >
             Contacts
           </button>
         </div>
       </div>
-      <button
-        onclick="logout()"
-        class="text-sm text-gray-400 hover:text-red-400 transition-colors flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/5"
-      >
-        <span>Sign Out</span>
-        <svg
-          class="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
+      <div class="flex items-center gap-3">
+        <div
+          class="hidden items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-300 md:flex"
         >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-          ></path>
-        </svg>
-      </button>
+          <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+          Queue Active
+        </div>
+        <button
+          id="sign-out-btn"
+          class="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-medium text-slate-300 transition hover:border-red-400/30 hover:text-red-300"
+        >
+          Sign Out
+        </button>
+      </div>
     </div>
   </nav>
 
-  <div class="max-w-7xl mx-auto px-6 py-8">
-    <!-- View 1: Dashboard -->
-    <div id="view-dashboard" class="flex flex-col lg:flex-row gap-8">
-      <!-- Left Column: Main Content -->
-      <div class="flex-1 space-y-6">
-        <!-- Quick Stats Row -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <!-- Total -->
-          <div
-            class="bg-gray-900/40 border border-white/5 rounded-xl p-5 backdrop-blur-sm hover:bg-gray-900/60 transition-colors group"
-          >
-            <div
-              class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1 group-hover:text-gray-400"
-            >
-              Total Imported
-            </div>
-            <div
-              class="text-2xl font-bold text-white tracking-tight"
-              id="stat-total"
-            >
-              {{ stats.total if stats else 0 }}
-            </div>
+  <main class="mx-auto max-w-7xl px-6 py-8">
+    <section id="view-dashboard" class="view-panel space-y-8">
+      <div class="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
+        <div class="rounded-3xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-xl">
+          <div class="text-xs uppercase tracking-[0.24em] text-slate-500">
+            Contacts
           </div>
-
-          <!-- Pending -->
-          <div
-            class="bg-gray-900/40 border border-white/5 rounded-xl p-5 backdrop-blur-sm hover:bg-gray-900/60 transition-colors group"
-          >
-            <div
-              class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1 group-hover:text-yellow-500/80"
-            >
-              Queue Pending
-            </div>
-            <div
-              class="text-2xl font-bold text-yellow-500 tracking-tight"
-              id="stat-pending"
-            >
-              {{ stats.pending if stats else 0 }}
-            </div>
+          <div id="stat-total-contacts" class="mt-4 text-3xl font-semibold text-white">
+            0
           </div>
-
-          <!-- Sent -->
-          <div
-            class="bg-gray-900/40 border border-white/5 rounded-xl p-5 backdrop-blur-sm hover:bg-gray-900/60 transition-colors group"
-          >
-            <div
-              class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1 group-hover:text-green-500/80"
-            >
-              Sent Successfully
-            </div>
-            <div
-              class="text-2xl font-bold text-green-500 tracking-tight"
-              id="stat-sent"
-            >
-              {{ stats.sent if stats else 0 }}
-            </div>
-          </div>
-
-          <!-- Failed -->
-          <div
-            class="bg-gray-900/40 border border-white/5 rounded-xl p-5 backdrop-blur-sm hover:bg-gray-900/60 transition-colors group"
-          >
-            <div
-              class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1 group-hover:text-red-500/80"
-            >
-              Failed
-            </div>
-            <div
-              class="text-2xl font-bold text-red-500 tracking-tight"
-              id="stat-failed"
-            >
-              {{ stats.failed if stats else 0 }}
-            </div>
-          </div>
+          <div class="mt-1 text-sm text-slate-400">Address book size</div>
         </div>
-
-        <!-- Usage Limits Card -->
-        <div
-          class="bg-gray-900/40 border border-white/5 rounded-xl p-6 backdrop-blur-sm"
-        >
-          <h3
-            class="text-base font-semibold text-white mb-4 flex items-center gap-2"
-          >
-            <svg
-              class="w-5 h-5 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M13 10V3L4 14h7v7l9-11h-7z"
-              ></path>
-            </svg>
-            Usage Limits
-          </h3>
-          <div class="grid md:grid-cols-2 gap-8">
-            <!-- Hourly Limit -->
-            <div class="space-y-2">
-              <div class="flex justify-between items-end">
-                <span class="text-sm text-gray-400">Hourly Rate</span>
-                <div class="text-right">
-                  <span id="stat-used-hour" class="text-lg font-bold text-white"
-                    >0</span
-                  >
-                  <span class="text-sm text-gray-600 font-medium"
-                    >/ <span id="stat-limit-hour">20</span></span
-                  >
-                </div>
-              </div>
-              <div class="h-2 bg-gray-800 rounded-full overflow-hidden">
-                <div
-                  id="bar-used-hour"
-                  class="h-full bg-blue-500 rounded-full transition-all duration-500"
-                  style="width: 0%"
-                ></div>
-              </div>
-            </div>
-
-            <!-- Daily Limit -->
-            <div class="space-y-2">
-              <div class="flex justify-between items-end">
-                <span class="text-sm text-gray-400">Daily Quota</span>
-                <div class="text-right">
-                  <span
-                    id="stat-used-today"
-                    class="text-lg font-bold text-white"
-                    >0</span
-                  >
-                  <span class="text-sm text-gray-600 font-medium"
-                    >/ <span id="stat-limit-today">300</span></span
-                  >
-                </div>
-              </div>
-              <div class="h-2 bg-gray-800 rounded-full overflow-hidden">
-                <div
-                  id="bar-used-today"
-                  class="h-full bg-purple-500 rounded-full transition-all duration-500"
-                  style="width: 0%"
-                ></div>
-              </div>
-            </div>
+        <div class="rounded-3xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-xl">
+          <div class="text-xs uppercase tracking-[0.24em] text-slate-500">
+            Templates
           </div>
+          <div id="stat-templates" class="mt-4 text-3xl font-semibold text-white">0</div>
+          <div class="mt-1 text-sm text-slate-400">Managed in workspace</div>
         </div>
-
-        <!-- Activities -->
-        <div
-          class="bg-gray-900/40 border border-white/5 rounded-xl overflow-hidden backdrop-blur-sm flex-1 min-h-[400px] flex flex-col"
-        >
-          <div
-            class="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02]"
-          >
-            <div class="flex items-center gap-4">
-              <h3 class="text-base font-semibold text-white">Live Activity</h3>
-              <div class="flex items-center gap-2 text-xs">
-                <select
-                  id="activity-sort"
-                  onchange="changeActivitySort()"
-                  class="bg-gray-800 text-gray-300 border border-gray-700 rounded px-2 py-1 focus:outline-none focus:border-purple-500"
-                >
-                  <option value="status_priority">Status Priority</option>
-                  <option value="recent">Recently Updated</option>
-                  <option value="newest">Newest First</option>
-                </select>
-                <select
-                  id="activity-limit"
-                  onchange="changeActivityLimit()"
-                  class="bg-gray-800 text-gray-300 border border-gray-700 rounded px-2 py-1 focus:outline-none focus:border-purple-500"
-                >
-                  <option value="25">25 per page</option>
-                  <option value="50" selected>50 per page</option>
-                  <option value="100">100 per page</option>
-                  <option value="200">200 per page</option>
-                </select>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="relative flex h-2 w-2">
-                <span
-                  class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
-                ></span>
-                <span
-                  class="relative inline-flex rounded-full h-2 w-2 bg-green-500"
-                ></span>
-              </span>
-              <span
-                class="text-xs text-gray-500 uppercase tracking-wider font-medium"
-                >Live</span
-              >
-            </div>
+        <div class="rounded-3xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-xl">
+          <div class="text-xs uppercase tracking-[0.24em] text-slate-500">
+            Batches
           </div>
-          <div class="overflow-x-auto flex-1">
-            <table class="w-full text-left text-sm">
-              <thead
-                class="bg-gray-900/50 text-gray-500 uppercase font-medium text-xs border-b border-white/5"
-              >
-                <tr>
-                  <th class="px-6 py-3 font-medium">Email</th>
-                  <th class="px-6 py-3 font-medium">Name</th>
-                  <th class="px-6 py-3 font-medium">Status</th>
-                  <th class="px-6 py-3 font-medium">Time</th>
-                  <th class="px-6 py-3 font-medium text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-white/5" id="activity-table-body">
-                <!-- JS will populate -->
-                <tr>
-                  <td colspan="5" class="px-6 py-8 text-center text-gray-600">
-                    Loading activity...
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div id="stat-batches" class="mt-4 text-3xl font-semibold text-white">0</div>
+          <div class="mt-1 text-sm text-slate-400">Staged and launched</div>
+        </div>
+        <div class="rounded-3xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-xl">
+          <div class="text-xs uppercase tracking-[0.24em] text-slate-500">
+            Queued
           </div>
-          <!-- Pagination Controls -->
-          <div
-            class="px-6 py-4 border-t border-white/5 bg-white/[0.02] flex items-center justify-between"
-          >
-            <div class="text-sm text-gray-400">
-              <span id="activity-showing">Showing 0 of 0</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <button
-                id="activity-prev"
-                onclick="changeActivityPage(-1)"
-                class="px-3 py-1 text-xs font-medium text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled
-              >
-                Previous
-              </button>
-              <span class="text-xs text-gray-500 px-2">
-                Page <span id="activity-current-page">1</span> of
-                <span id="activity-total-pages">1</span>
-              </span>
-              <button
-                id="activity-next"
-                onclick="changeActivityPage(1)"
-                class="px-3 py-1 text-xs font-medium text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled
-              >
-                Next
-              </button>
-            </div>
+          <div id="stat-queued" class="mt-4 text-3xl font-semibold text-amber-300">0</div>
+          <div class="mt-1 text-sm text-slate-400">Ready to send</div>
+        </div>
+        <div class="rounded-3xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-xl">
+          <div class="text-xs uppercase tracking-[0.24em] text-slate-500">
+            Sent
           </div>
+          <div id="stat-sent" class="mt-4 text-3xl font-semibold text-emerald-300">0</div>
+          <div class="mt-1 text-sm text-slate-400">Across all batches</div>
+        </div>
+        <div class="rounded-3xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-xl">
+          <div class="text-xs uppercase tracking-[0.24em] text-slate-500">
+            Failed
+          </div>
+          <div id="stat-failed" class="mt-4 text-3xl font-semibold text-rose-300">0</div>
+          <div class="mt-1 text-sm text-slate-400">Needs attention</div>
         </div>
       </div>
 
-      <!-- Right Column: Controls -->
-      <div class="w-full lg:w-96 space-y-6">
-        <!-- Import Card -->
-        <div
-          class="bg-gray-900/40 border border-white/5 rounded-xl p-6 backdrop-blur-sm"
-        >
-          <h3 class="text-base font-semibold text-white mb-4">
-            Import Contacts
-          </h3>
-          <div
-            id="drop-zone"
-            class="border-2 border-dashed border-gray-700 hover:border-blue-500/50 hover:bg-blue-500/5 rounded-xl p-8 text-center transition-all cursor-pointer group"
-          >
-            <div
-              class="h-10 w-10 bg-gray-800 rounded-lg flex items-center justify-center mx-auto mb-3 group-hover:bg-blue-500/20 transition-colors"
-            >
-              <svg
-                class="w-5 h-5 text-gray-400 group-hover:text-blue-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                ></path>
-              </svg>
-            </div>
-            <p class="text-gray-300 font-medium text-sm">Upload CSV or Excel</p>
-            <p class="text-xs text-gray-500 mt-1">
-              Drag & drop or click to browse
-            </p>
-
-            <div id="upload-progress" class="hidden mt-4">
-              <div class="bg-gray-800 h-1 rounded-full overflow-hidden">
-                <div
-                  class="bg-blue-500 h-full w-1/2 animate-[shimmer_1s_infinite]"
-                ></div>
+      <div class="grid gap-8 xl:grid-cols-[1.3fr_0.7fr]">
+        <div class="space-y-6">
+          <div class="rounded-[28px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl">
+            <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+              <div>
+                <div class="text-xs uppercase tracking-[0.28em] text-sky-300/80">
+                  Launch Wizard
+                </div>
+                <h2 class="mt-2 text-2xl font-semibold text-white">
+                  Stage a template-aware campaign import
+                </h2>
+                <p class="mt-2 max-w-2xl text-sm text-slate-400">
+                  Choose a published template, upload a contact file, map fields,
+                  validate everything against the template schema, preview sample renders,
+                  then explicitly stage and launch.
+                </p>
               </div>
-              <p class="text-xs text-gray-500 mt-2">Processing...</p>
-            </div>
-          </div>
-          <input
-            type="file"
-            id="file-upload"
-            class="hidden"
-            accept=".xlsx, .xls, .csv"
-          />
-        </div>
-
-        <!-- Settings Card -->
-        <div
-          class="bg-gray-900/40 border border-white/5 rounded-xl p-6 backdrop-blur-sm sticky top-24"
-        >
-          <h3 class="text-base font-semibold text-white mb-6">Configuration</h3>
-          <form id="settings-form" class="space-y-4">
-            <!-- API Key -->
-            <div class="space-y-1.5">
-              <label
-                class="text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >Brevo API Key</label
-              >
-              <input
-                type="password"
-                name="brevo_api_key"
-                value="{{ settings.brevo_api_key or '' }}"
-                class="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-gray-700"
-                placeholder="xkeysib-..."
-                required
-              />
-            </div>
-
-            <!-- Sender Info -->
-            <div class="grid grid-cols-2 gap-4">
-              <div class="space-y-1.5">
-                <label
-                  class="text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >From Email</label
-                >
-                <input
-                  type="email"
-                  name="sender_email"
-                  value="{{ settings.sender_email or '' }}"
-                  class="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-gray-700"
-                  placeholder="you@domain.com"
-                  required
-                />
-              </div>
-              <div class="space-y-1.5">
-                <label
-                  class="text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >From Name</label
-                >
-                <input
-                  type="text"
-                  name="sender_name"
-                  value="{{ settings.sender_name or '' }}"
-                  class="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-gray-700"
-                  placeholder="Marketing"
-                />
+              <div class="rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3 text-sm text-slate-400">
+                Strict validation is enabled
               </div>
             </div>
 
-            <!-- Subject -->
-            <div class="space-y-1.5">
-              <label
-                class="text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >Subject Line</label
-              >
-              <input
-                type="text"
-                name="subject"
-                value="{{ settings.subject or 'Campaign Update' }}"
-                class="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-gray-700"
-              />
-            </div>
-
-            <!-- Template Selection -->
-            <div class="space-y-1.5">
-              <label
-                class="text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >Email Template</label
-              >
-              <div class="flex gap-2">
-                <div class="relative flex-1">
+            <div class="mt-6 grid gap-5 lg:grid-cols-2">
+              <div class="space-y-5">
+                <div class="rounded-2xl border border-white/10 bg-slate-950/40 p-5">
+                  <label class="text-xs uppercase tracking-[0.22em] text-slate-500">
+                    Step 1 · Published Template
+                  </label>
                   <select
-                    name="selected_template"
-                    id="selected_template"
-                    class="w-full appearance-none bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer"
-                  >
-                    <option value="">Loading templates...</option>
-                  </select>
-                  <div
-                    class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500"
-                  >
-                    <svg
-                      class="fill-current h-4 w-4"
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 20 20"
+                    id="campaign-template-select"
+                    class="mt-3 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
+                  ></select>
+                  <p id="campaign-template-hint" class="mt-3 text-sm text-slate-400">
+                    Select a published template to unlock import validation.
+                  </p>
+                </div>
+
+                <div class="rounded-2xl border border-white/10 bg-slate-950/40 p-5">
+                  <div class="flex items-center justify-between gap-4">
+                    <div>
+                      <label class="text-xs uppercase tracking-[0.22em] text-slate-500">
+                        Step 2 · Upload CSV or Excel
+                      </label>
+                      <p class="mt-2 text-sm text-slate-400">
+                        Files are analyzed before any contacts or recipients are created.
+                      </p>
+                    </div>
+                    <button
+                      id="campaign-upload-trigger"
+                      class="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-slate-200"
                     >
-                      <path
-                        d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"
-                      />
-                    </svg>
+                      Choose File
+                    </button>
+                  </div>
+                  <div
+                    id="campaign-dropzone"
+                    class="mt-4 rounded-3xl border border-dashed border-white/10 bg-gradient-to-br from-slate-950/70 to-slate-900/50 p-8 text-center transition hover:border-sky-400/50"
+                  >
+                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03]">
+                      <svg
+                        class="h-6 w-6 text-slate-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="1.8"
+                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M12 11v8m0 0l-3-3m3 3l3-3"
+                        ></path>
+                      </svg>
+                    </div>
+                    <div class="mt-4 text-base font-medium text-white">
+                      Drop CSV, XLSX, or XLS here
+                    </div>
+                    <div class="mt-1 text-sm text-slate-500">
+                      The importer will detect sheets, suggest mappings, and generate an error report.
+                    </div>
+                    <div id="campaign-upload-status" class="mt-4 text-sm text-sky-300"></div>
+                  </div>
+                  <input
+                    id="campaign-file-input"
+                    type="file"
+                    class="hidden"
+                    accept=".csv,.xlsx,.xls"
+                  />
+                </div>
+              </div>
+
+              <div class="space-y-5">
+                <div class="rounded-2xl border border-white/10 bg-slate-950/40 p-5">
+                  <div class="flex items-center justify-between">
+                    <label class="text-xs uppercase tracking-[0.22em] text-slate-500">
+                      Step 3 · Sheet + Mapping
+                    </label>
+                    <button
+                      id="validate-import-btn"
+                      class="rounded-full border border-sky-400/40 bg-sky-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-sky-200 transition hover:bg-sky-400/20"
+                    >
+                      Validate
+                    </button>
+                  </div>
+                  <div class="mt-4 grid gap-4">
+                    <div>
+                      <label class="text-sm text-slate-400">Workbook sheet</label>
+                      <select
+                        id="import-sheet-select"
+                        class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
+                      ></select>
+                    </div>
+                    <div id="mapping-grid" class="space-y-3"></div>
                   </div>
                 </div>
+
+                <div class="rounded-2xl border border-white/10 bg-slate-950/40 p-5">
+                  <div class="flex items-center justify-between">
+                    <label class="text-xs uppercase tracking-[0.22em] text-slate-500">
+                      Step 4 · Review + Launch
+                    </label>
+                    <div class="flex items-center gap-2">
+                      <button
+                        id="stage-import-btn"
+                        class="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-200 transition hover:bg-white/[0.10]"
+                      >
+                        Stage Batch
+                      </button>
+                      <button
+                        id="launch-batch-btn"
+                        class="rounded-full bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-950 transition hover:bg-slate-200"
+                      >
+                        Launch
+                      </button>
+                    </div>
+                  </div>
+                  <div id="import-summary-panel" class="mt-4 grid gap-3 md:grid-cols-2"></div>
+                  <div id="import-errors-panel" class="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-slate-400">
+                    Upload a file and run validation to review row-level issues.
+                  </div>
+                  <div
+                    id="sample-preview-grid"
+                    class="mt-4 grid gap-4 lg:grid-cols-2"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-[28px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl">
+            <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <div class="text-xs uppercase tracking-[0.28em] text-emerald-300/80">
+                  Batches
+                </div>
+                <h3 class="mt-2 text-xl font-semibold text-white">
+                  Recent staged and launched batches
+                </h3>
+              </div>
+              <button
+                id="refresh-batches-btn"
+                class="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/[0.10]"
+              >
+                Refresh
+              </button>
+            </div>
+            <div class="mt-5 overflow-hidden rounded-3xl border border-white/10">
+              <div class="overflow-x-auto">
+                <table class="min-w-full text-left text-sm">
+                  <thead class="bg-slate-950/80 text-xs uppercase tracking-[0.18em] text-slate-500">
+                    <tr>
+                      <th class="px-5 py-4">Batch</th>
+                      <th class="px-5 py-4">Status</th>
+                      <th class="px-5 py-4">Template</th>
+                      <th class="px-5 py-4">Counts</th>
+                      <th class="px-5 py-4 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="batches-table-body" class="divide-y divide-white/10 bg-black/10">
+                    <tr>
+                      <td colspan="5" class="px-5 py-6 text-center text-slate-500">
+                        Loading batches...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-[28px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl">
+            <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <div class="text-xs uppercase tracking-[0.28em] text-amber-300/80">
+                  Activity
+                </div>
+                <h3 class="mt-2 text-xl font-semibold text-white">
+                  Recent delivery and validation activity
+                </h3>
+              </div>
+              <div class="flex items-center gap-3">
+                <select
+                  id="activity-filter"
+                  class="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-white outline-none"
+                >
+                  <option value="">All statuses</option>
+                  <option value="queued">Queued</option>
+                  <option value="processing">Processing</option>
+                  <option value="sent">Sent</option>
+                  <option value="failed">Failed</option>
+                  <option value="unsubscribed">Unsubscribed</option>
+                </select>
                 <button
-                  type="button"
-                  onclick="document.getElementById('template-upload').click()"
-                  class="bg-white/5 hover:bg-white/10 border border-white/10 text-white p-2 rounded-lg transition-colors flex-shrink-0"
-                  title="Upload New Template"
+                  id="refresh-activity-btn"
+                  class="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/[0.10]"
                 >
-                  <svg
-                    class="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M12 4v16m8-8H4"
-                    ></path>
-                  </svg>
+                  Refresh
                 </button>
-                <input
-                  type="file"
-                  id="template-upload"
-                  class="hidden"
-                  accept=".html"
-                  onchange="uploadTemplate(this)"
-                />
               </div>
             </div>
-
-            <!-- Limits -->
-            <div class="grid grid-cols-2 gap-4">
-              <div class="space-y-1.5">
-                <label
-                  class="text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >Hourly Limit</label
-                >
-                <input
-                  type="number"
-                  name="hourly_limit"
-                  value="{{ settings.hourly_limit }}"
-                  class="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
-                />
-              </div>
-              <div class="space-y-1.5">
-                <label
-                  class="text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >Daily Limit</label
-                >
-                <input
-                  type="number"
-                  name="daily_limit"
-                  id="daily_limit_input"
-                  value="{{ settings.daily_limit }}"
-                  class="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
-                />
+            <div class="mt-5 overflow-hidden rounded-3xl border border-white/10">
+              <div class="overflow-x-auto">
+                <table class="min-w-full text-left text-sm">
+                  <thead class="bg-slate-950/80 text-xs uppercase tracking-[0.18em] text-slate-500">
+                    <tr>
+                      <th class="px-5 py-4">Recipient</th>
+                      <th class="px-5 py-4">Status</th>
+                      <th class="px-5 py-4">Batch</th>
+                      <th class="px-5 py-4">Template</th>
+                      <th class="px-5 py-4">Updated</th>
+                      <th class="px-5 py-4 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="activity-table-body" class="divide-y divide-white/10 bg-black/10">
+                    <tr>
+                      <td colspan="6" class="px-5 py-6 text-center text-slate-500">
+                        Loading activity...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
+          </div>
+        </div>
 
-            <button
-              type="submit"
-              class="w-full bg-white text-black font-semibold h-10 rounded-lg hover:bg-gray-200 transition-all shadow-[0_0_15px_rgba(255,255,255,0.1)] active:scale-[0.98] mt-2"
-            >
-              Save Configuration
-            </button>
-          </form>
+        <div class="space-y-6">
+          <div class="rounded-[28px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl">
+            <div class="text-xs uppercase tracking-[0.28em] text-fuchsia-300/80">
+              Configuration
+            </div>
+            <h3 class="mt-2 text-xl font-semibold text-white">
+              Sender identity and default template
+            </h3>
+            <form id="settings-form" class="mt-6 space-y-4">
+              <div>
+                <label class="text-sm text-slate-400">Brevo API Key</label>
+                <input
+                  type="password"
+                  name="brevo_api_key"
+                  class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
+                />
+              </div>
+              <div class="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label class="text-sm text-slate-400">Sender Email</label>
+                  <input
+                    type="email"
+                    name="sender_email"
+                    class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
+                  />
+                </div>
+                <div>
+                  <label class="text-sm text-slate-400">Sender Name</label>
+                  <input
+                    type="text"
+                    name="sender_name"
+                    class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
+                  />
+                </div>
+              </div>
+              <div class="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label class="text-sm text-slate-400">Hourly Limit</label>
+                  <input
+                    type="number"
+                    min="1"
+                    name="hourly_limit"
+                    class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
+                  />
+                </div>
+                <div>
+                  <label class="text-sm text-slate-400">Daily Limit</label>
+                  <input
+                    type="number"
+                    min="1"
+                    name="daily_limit"
+                    class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
+                  />
+                </div>
+              </div>
+              <div>
+                <label class="text-sm text-slate-400">Default Template</label>
+                <select
+                  id="settings-default-template"
+                  name="default_template_id"
+                  class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
+                ></select>
+              </div>
+              <div class="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                <div class="flex items-center justify-between gap-4">
+                  <div>
+                    <div class="text-sm font-medium text-white">Usage Today</div>
+                    <div class="mt-1 text-sm text-slate-400">
+                      <span id="usage-hour">0</span>/<span id="limit-hour">0</span>
+                      this hour ·
+                      <span id="usage-day">0</span>/<span id="limit-day">0</span>
+                      today
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    class="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-slate-200"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <div class="rounded-[28px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl">
+            <div class="text-xs uppercase tracking-[0.28em] text-slate-500">
+              Preview Samples
+            </div>
+            <h3 class="mt-2 text-xl font-semibold text-white">
+              What validation checks before launch
+            </h3>
+            <div class="mt-5 space-y-3">
+              <div class="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-300">
+                Required template fields must be mapped before validation runs.
+              </div>
+              <div class="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-300">
+                Duplicate emails in the file are rejected and included in the downloadable error report.
+              </div>
+              <div class="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-300">
+                Staging upserts contacts first, then locks recipients to the selected published template version.
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- View 2: Contact Manager (Hidden by default) -->
-    <div id="view-contacts" class="hidden space-y-6">
-      <div
-        class="bg-gray-900/40 border border-white/5 rounded-xl border-gray-800 overflow-hidden backdrop-blur-sm"
-      >
-        <!-- Toolbar -->
-        <div
-          class="px-6 py-4 border-b border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 bg-white/[0.02]"
-        >
-          <div class="relative w-full md:w-64">
-            <input
-              type="text"
-              id="contact-search"
-              placeholder="Search contacts..."
-              class="w-full bg-black/50 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition-all"
-              oninput="debounceSearch()"
-            />
-            <svg
-              class="w-4 h-4 text-gray-500 absolute left-3 top-3"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              ></path>
-            </svg>
-          </div>
-          <div class="flex items-center gap-3">
-            <button
-              onclick="loadContacts()"
-              class="p-2 text-gray-400 hover:text-white transition-colors bg-white/5 rounded-lg border border-white/5"
-            >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+    <section id="view-templates" class="view-panel hidden space-y-8">
+      <div class="grid gap-8 xl:grid-cols-[320px_minmax(0,1fr)]">
+        <aside class="space-y-6">
+          <div class="rounded-[28px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur-xl">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-xs uppercase tracking-[0.28em] text-sky-300/80">
+                  Workspace
+                </div>
+                <h2 class="mt-2 text-xl font-semibold text-white">Templates</h2>
+              </div>
+              <button
+                id="refresh-templates-btn"
+                class="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300 transition hover:bg-white/[0.1]"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                ></path>
-              </svg>
+                Refresh
+              </button>
+            </div>
+            <div class="mt-5 space-y-3">
+              <button
+                id="new-builder-template-btn"
+                class="w-full rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-200"
+              >
+                New Builder Template
+              </button>
+              <button
+                id="new-code-template-btn"
+                class="w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.10]"
+              >
+                New Code Template
+              </button>
+              <div class="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                <label class="text-sm text-slate-400">Import HTML file</label>
+                <input
+                  id="import-html-template-input"
+                  type="file"
+                  class="mt-3 block w-full text-sm text-slate-300"
+                  accept=".html"
+                />
+                <button
+                  id="import-html-template-btn"
+                  class="mt-3 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.10]"
+                >
+                  Import HTML as Code Template
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-[28px] border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl">
+            <div class="mb-3 text-xs uppercase tracking-[0.28em] text-slate-500">
+              Library
+            </div>
+            <div id="template-list" class="space-y-2"></div>
+          </div>
+        </aside>
+
+        <div class="space-y-6">
+          <div class="rounded-[28px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl">
+            <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+              <div>
+                <div class="text-xs uppercase tracking-[0.28em] text-emerald-300/80">
+                  Editor
+                </div>
+                <h2 id="template-editor-title" class="mt-2 text-2xl font-semibold text-white">
+                  Select a template
+                </h2>
+                <div id="template-editor-meta" class="mt-2 text-sm text-slate-400">
+                  Choose a template from the library to open its draft workspace.
+                </div>
+              </div>
+              <div class="flex flex-wrap items-center gap-3">
+                <button
+                  id="duplicate-template-btn"
+                  class="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-slate-100 transition hover:bg-white/[0.10]"
+                >
+                  Duplicate
+                </button>
+                <button
+                  id="archive-template-btn"
+                  class="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-slate-100 transition hover:bg-white/[0.10]"
+                >
+                  Archive
+                </button>
+                <button
+                  id="set-default-template-btn"
+                  class="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-slate-100 transition hover:bg-white/[0.10]"
+                >
+                  Set Default
+                </button>
+                <button
+                  id="delete-template-btn"
+                  class="rounded-full border border-rose-400/20 bg-rose-400/10 px-4 py-2 text-sm font-medium text-rose-200 transition hover:bg-rose-400/20"
+                >
+                  Delete
+                </button>
+                <button
+                  id="save-draft-btn"
+                  class="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.10]"
+                >
+                  Save Draft
+                </button>
+                <button
+                  id="publish-template-btn"
+                  class="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-slate-200"
+                >
+                  Publish
+                </button>
+              </div>
+            </div>
+
+            <div class="mt-6 flex flex-wrap items-center gap-3">
+              <button
+                data-template-tab="design"
+                class="template-tab rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-white"
+              >
+                Design
+              </button>
+              <button
+                data-template-tab="code"
+                class="template-tab rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-medium text-slate-300"
+              >
+                Code
+              </button>
+              <button
+                data-template-tab="preview"
+                class="template-tab rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-medium text-slate-300"
+              >
+                Preview
+              </button>
+              <button
+                data-template-tab="settings"
+                class="template-tab rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-medium text-slate-300"
+              >
+                Settings
+              </button>
+              <div id="template-validation-banner" class="ml-auto text-sm text-slate-400"></div>
+            </div>
+          </div>
+
+          <div id="template-tab-design" class="template-tab-panel rounded-[28px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl">
+            <div class="grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)_360px]">
+              <div class="space-y-4">
+                <div>
+                  <div class="text-xs uppercase tracking-[0.24em] text-slate-500">
+                    Block Library
+                  </div>
+                  <div class="mt-4 grid gap-2">
+                    <button data-add-block="section" class="block-add-btn rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-left text-sm text-white transition hover:bg-white/[0.10]">Section</button>
+                    <button data-add-block="columns" class="block-add-btn rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-left text-sm text-white transition hover:bg-white/[0.10]">Columns</button>
+                    <button data-add-block="text" class="block-add-btn rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-left text-sm text-white transition hover:bg-white/[0.10]">Text</button>
+                    <button data-add-block="image" class="block-add-btn rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-left text-sm text-white transition hover:bg-white/[0.10]">Image</button>
+                    <button data-add-block="button" class="block-add-btn rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-left text-sm text-white transition hover:bg-white/[0.10]">Button</button>
+                    <button data-add-block="spacer" class="block-add-btn rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-left text-sm text-white transition hover:bg-white/[0.10]">Spacer</button>
+                    <button data-add-block="divider" class="block-add-btn rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-left text-sm text-white transition hover:bg-white/[0.10]">Divider</button>
+                    <button data-add-block="social_footer" class="block-add-btn rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-left text-sm text-white transition hover:bg-white/[0.10]">Social Footer</button>
+                    <button data-add-block="raw_html" class="block-add-btn rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-left text-sm text-white transition hover:bg-white/[0.10]">Raw HTML</button>
+                  </div>
+                </div>
+              </div>
+              <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <div class="text-xs uppercase tracking-[0.24em] text-slate-500">
+                      Canvas Outline
+                    </div>
+                    <div class="mt-1 text-sm text-slate-400">
+                      Reorder blocks, choose one, then edit it in the inspector.
+                    </div>
+                  </div>
+                </div>
+                <div id="builder-block-list" class="space-y-3"></div>
+              </div>
+              <div class="space-y-4">
+                <div>
+                  <div class="text-xs uppercase tracking-[0.24em] text-slate-500">
+                    Inspector
+                  </div>
+                  <div class="mt-1 text-sm text-slate-400">
+                    Editing controls for the selected block.
+                  </div>
+                </div>
+                <div id="block-inspector" class="rounded-3xl border border-white/10 bg-slate-950/40 p-5 text-sm text-slate-400">
+                  Select a block to edit its fields, visibility rules, and content.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="template-tab-code" class="template-tab-panel hidden rounded-[28px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl">
+            <div class="grid gap-6 xl:grid-cols-[1fr_320px]">
+              <div>
+                <div class="text-xs uppercase tracking-[0.24em] text-slate-500">Code Mode</div>
+                <textarea
+                  id="template-html-source"
+                  class="mt-4 h-[560px] w-full rounded-[28px] border border-white/10 bg-slate-950/70 px-5 py-4 font-mono text-sm text-slate-100 outline-none transition focus:border-sky-400"
+                  spellcheck="false"
+                ></textarea>
+              </div>
+              <div class="space-y-4">
+                <div class="rounded-3xl border border-white/10 bg-slate-950/40 p-5">
+                  <div class="text-sm font-medium text-white">Code-mode notes</div>
+                  <ul class="mt-3 space-y-3 text-sm text-slate-400">
+                    <li>Imported HTML stays in code mode unless you rebuild it visually.</li>
+                    <li>Use `{{ field_name }}` placeholders for custom fields.</li>
+                    <li>`{{ unsubscribe_url }}` is always available.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="template-tab-preview" class="template-tab-panel hidden rounded-[28px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl">
+            <div class="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+              <div class="space-y-4">
+                <div class="rounded-3xl border border-white/10 bg-slate-950/40 p-5">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <div class="text-xs uppercase tracking-[0.24em] text-slate-500">
+                        Sample Data
+                      </div>
+                      <div class="mt-1 text-sm text-slate-400">
+                        Drive preview rendering with realistic tokens.
+                      </div>
+                    </div>
+                    <button
+                      id="use-sample-values-btn"
+                      class="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-100 transition hover:bg-white/[0.10]"
+                    >
+                      Use Samples
+                    </button>
+                  </div>
+                  <div id="preview-sample-fields" class="mt-4 space-y-3"></div>
+                  <button
+                    id="refresh-preview-btn"
+                    class="mt-4 w-full rounded-full bg-white px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-200"
+                  >
+                    Refresh Preview
+                  </button>
+                </div>
+
+                <div class="rounded-3xl border border-white/10 bg-slate-950/40 p-5">
+                  <div class="text-xs uppercase tracking-[0.24em] text-slate-500">
+                    Preview Modes
+                  </div>
+                  <div class="mt-4 flex flex-wrap gap-2">
+                    <button data-preview-width="100%" class="preview-width-btn rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950">Full</button>
+                    <button data-preview-width="680px" class="preview-width-btn rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-slate-100">Desktop</button>
+                    <button data-preview-width="420px" class="preview-width-btn rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-slate-100">Email Width</button>
+                    <button data-preview-width="360px" class="preview-width-btn rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-slate-100">Mobile</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="space-y-4">
+                <div class="rounded-3xl border border-white/10 bg-slate-950/40 p-5">
+                  <div class="text-xs uppercase tracking-[0.24em] text-slate-500">
+                    Rendered Preview
+                  </div>
+                  <div id="preview-subject" class="mt-2 text-sm text-slate-300"></div>
+                </div>
+                <div class="overflow-hidden rounded-[28px] border border-white/10 bg-slate-950/80 p-4">
+                  <div class="mx-auto transition-all" id="preview-frame-shell" style="max-width:100%;">
+                    <iframe
+                      id="preview-frame"
+                      sandbox=""
+                      class="h-[700px] w-full rounded-[24px] border border-white/10 bg-white"
+                    ></iframe>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="template-tab-settings" class="template-tab-panel hidden rounded-[28px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl">
+            <div class="grid gap-6 xl:grid-cols-[1fr_360px]">
+              <div class="space-y-6">
+                <div class="rounded-3xl border border-white/10 bg-slate-950/40 p-5">
+                  <div class="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label class="text-sm text-slate-400">Subject</label>
+                      <input
+                        id="template-subject"
+                        type="text"
+                        class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
+                      />
+                    </div>
+                    <div>
+                      <label class="text-sm text-slate-400">Preheader</label>
+                      <input
+                        id="template-preheader"
+                        type="text"
+                        class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="rounded-3xl border border-white/10 bg-slate-950/40 p-5">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <div class="text-xs uppercase tracking-[0.24em] text-slate-500">
+                        Merge Fields
+                      </div>
+                      <div class="mt-1 text-sm text-slate-400">
+                        Custom fields are validated against imports. Built-ins are always available.
+                      </div>
+                    </div>
+                    <button
+                      id="add-schema-field-btn"
+                      class="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-100 transition hover:bg-white/[0.10]"
+                    >
+                      Add Field
+                    </button>
+                  </div>
+                  <div id="schema-fields-list" class="mt-4 space-y-3"></div>
+                </div>
+              </div>
+
+              <div class="space-y-6">
+                <div class="rounded-3xl border border-white/10 bg-slate-950/40 p-5">
+                  <div class="text-xs uppercase tracking-[0.24em] text-slate-500">
+                    Test Send
+                  </div>
+                  <div class="mt-1 text-sm text-slate-400">
+                    Sends the current draft without publishing it.
+                  </div>
+                  <input
+                    id="test-send-email"
+                    type="email"
+                    placeholder="recipient@example.com"
+                    class="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
+                  />
+                  <button
+                    id="send-test-email-btn"
+                    class="mt-4 w-full rounded-full bg-white px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-200"
+                  >
+                    Send Test Email
+                  </button>
+                </div>
+
+                <div class="rounded-3xl border border-white/10 bg-slate-950/40 p-5">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <div class="text-xs uppercase tracking-[0.24em] text-slate-500">
+                        Assets
+                      </div>
+                      <div id="asset-support-message" class="mt-1 text-sm text-slate-400">
+                        External image URLs are always supported.
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mt-4">
+                    <input
+                      id="asset-upload-input"
+                      type="file"
+                      accept=".png,.jpg,.jpeg,.gif,.webp"
+                      class="block w-full text-sm text-slate-300"
+                    />
+                    <button
+                      id="asset-upload-btn"
+                      class="mt-3 w-full rounded-full border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.10]"
+                    >
+                      Upload Asset
+                    </button>
+                  </div>
+                  <div id="asset-list" class="mt-4 space-y-3"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-contacts" class="view-panel hidden space-y-8">
+      <div class="rounded-[28px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl">
+        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div class="text-xs uppercase tracking-[0.28em] text-slate-500">
+              Address Book
+            </div>
+            <h2 class="mt-2 text-2xl font-semibold text-white">
+              Contacts, subscriptions, and last delivery state
+            </h2>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <input
+              id="contact-search"
+              type="text"
+              placeholder="Search by name or email"
+              class="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-white outline-none transition focus:border-sky-400"
+            />
+            <button
+              id="refresh-contacts-btn"
+              class="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/[0.10]"
+            >
+              Refresh
             </button>
             <button
-              onclick="deleteAllContacts()"
-              class="text-sm bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 px-4 py-2 rounded-lg font-medium transition-all"
+              id="delete-all-contacts-btn"
+              class="rounded-full border border-rose-400/20 bg-rose-400/10 px-4 py-2 text-sm font-medium text-rose-200 transition hover:bg-rose-400/20"
             >
               Delete All
             </button>
           </div>
         </div>
 
-        <!-- Table -->
-        <div class="overflow-x-auto min-h-[400px]">
-          <table class="w-full text-left text-sm">
-            <thead
-              class="bg-gray-900/50 text-gray-500 uppercase font-medium text-xs border-b border-white/5"
-            >
-              <tr>
-                <th class="px-6 py-3 font-medium">Name</th>
-                <th class="px-6 py-3 font-medium">Email</th>
-                <th class="px-6 py-3 font-medium">Status</th>
-                <th class="px-6 py-3 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-white/5" id="contacts-table-body">
-              <tr>
-                <td colspan="4" class="px-6 py-8 text-center text-gray-600">
-                  Loading...
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Pagination -->
-        <div
-          class="px-6 py-4 border-t border-white/5 flex justify-between items-center bg-white/[0.02]"
-        >
-          <span class="text-sm text-gray-500" id="pagination-info"
-            >Page 1 of 1</span
-          >
-          <div class="flex gap-2">
-            <button
-              id="btn-prev"
-              onclick="changePage(-1)"
-              class="px-3 py-1 text-sm bg-white/5 hover:bg-white/10 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Previous
-            </button>
-            <button
-              id="btn-next"
-              onclick="changePage(1)"
-              class="px-3 py-1 text-sm bg-white/5 hover:bg-white/10 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Next
-            </button>
+        <div class="mt-5 overflow-hidden rounded-3xl border border-white/10">
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-left text-sm">
+              <thead class="bg-slate-950/80 text-xs uppercase tracking-[0.18em] text-slate-500">
+                <tr>
+                  <th class="px-5 py-4">Contact</th>
+                  <th class="px-5 py-4">Subscription</th>
+                  <th class="px-5 py-4">Custom Fields</th>
+                  <th class="px-5 py-4">Last Delivery</th>
+                  <th class="px-5 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="contacts-table-body" class="divide-y divide-white/10 bg-black/10">
+                <tr>
+                  <td colspan="5" class="px-5 py-6 text-center text-slate-500">
+                    Loading contacts...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
-    </div>
-  </div>
+    </section>
+  </main>
 </div>
 
-<!-- Edit Modal -->
 <div
-  id="edit-modal"
-  class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300"
+  id="contact-modal"
+  class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/80 p-6 backdrop-blur-xl"
 >
-  <div
-    class="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-md shadow-2xl transform scale-95 transition-transform duration-300"
-    id="edit-modal-content"
-  >
-    <h3 class="text-lg font-semibold text-white mb-4">Edit Contact</h3>
-    <form id="edit-form" class="space-y-4">
-      <input type="hidden" name="contact_id" id="edit-id" />
+  <div class="w-full max-w-xl rounded-[32px] border border-white/10 bg-slate-950 p-6 shadow-2xl">
+    <div class="flex items-start justify-between gap-4">
       <div>
-        <label class="block text-sm font-medium text-gray-400 mb-1">Name</label>
-        <input
-          type="text"
-          name="name"
-          id="edit-name"
-          class="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-blue-500 focus:outline-none"
-        />
+        <div class="text-xs uppercase tracking-[0.28em] text-slate-500">
+          Contact Editor
+        </div>
+        <h3 class="mt-2 text-2xl font-semibold text-white">Edit contact</h3>
+      </div>
+      <button
+        id="close-contact-modal-btn"
+        class="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-sm text-slate-300 transition hover:bg-white/[0.10]"
+      >
+        Close
+      </button>
+    </div>
+    <form id="contact-form" class="mt-6 space-y-4">
+      <input type="hidden" id="contact-form-id" />
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <label class="text-sm text-slate-400">Name</label>
+          <input
+            id="contact-form-name"
+            type="text"
+            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
+          />
+        </div>
+        <div>
+          <label class="text-sm text-slate-400">Email</label>
+          <input
+            id="contact-form-email"
+            type="email"
+            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
+          />
+        </div>
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-400 mb-1"
-          >Email</label
-        >
-        <input
-          type="email"
-          name="email"
-          id="edit-email"
-          class="w-full bg-black border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-blue-500 focus:outline-none"
-        />
+        <label class="text-sm text-slate-400">Custom fields (JSON)</label>
+        <textarea
+          id="contact-form-custom-fields"
+          class="mt-2 h-44 w-full rounded-3xl border border-white/10 bg-black/30 px-4 py-3 font-mono text-sm text-white outline-none transition focus:border-sky-400"
+          spellcheck="false"
+        ></textarea>
       </div>
-      <div class="flex justify-end gap-3 pt-4">
-        <button
-          type="button"
-          onclick="closeEditModal()"
-          class="px-4 py-2 text-sm text-gray-400 hover:text-white"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium"
-        >
-          Save Changes
-        </button>
-      </div>
+      <label class="flex items-center gap-3 text-sm text-slate-300">
+        <input id="contact-form-unsubscribed" type="checkbox" class="h-4 w-4 rounded border-white/10 bg-black/30" />
+        Mark as unsubscribed
+      </label>
+      <button
+        type="submit"
+        class="w-full rounded-full bg-white px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-200"
+      >
+        Save Contact
+      </button>
     </form>
   </div>
 </div>
 
-<!-- Toast Container -->
-<div
-  id="toast-container"
-  class="fixed top-6 right-6 z-50 flex flex-col space-y-4 pointer-events-none"
-></div>
-
-<script>
-  // --- Auth & Globals ---
-  const token = localStorage.getItem("token");
-  if (!token) window.location.href = "/login";
-  const headers = { Authorization: `Bearer ${token}` };
-
-  // --- State ---
-  let currentPage = 1;
-  let currentLimit = 50;
-  let currentSearch = "";
-  let searchTimeout = null;
-
-  // --- Navigation ---
-  function switchView(view) {
-    document.getElementById("view-dashboard").classList.add("hidden");
-    document.getElementById("view-contacts").classList.add("hidden");
-    document
-      .getElementById("nav-dashboard")
-      .classList.remove("text-purple-400", "font-semibold");
-    document
-      .getElementById("nav-contacts")
-      .classList.remove("text-purple-400", "font-semibold");
-    document.getElementById("nav-dashboard").classList.add("text-gray-400");
-    document.getElementById("nav-contacts").classList.add("text-gray-400");
-
-    if (view === "dashboard") {
-      document.getElementById("view-dashboard").classList.remove("hidden");
-      document
-        .getElementById("nav-dashboard")
-        .classList.add("text-purple-400", "font-semibold");
-      document
-        .getElementById("nav-dashboard")
-        .classList.remove("text-gray-400");
-      updateStats(); // Refresh stats
-    } else {
-      document.getElementById("view-contacts").classList.remove("hidden");
-      document
-        .getElementById("nav-contacts")
-        .classList.add("text-purple-400", "font-semibold");
-      document.getElementById("nav-contacts").classList.remove("text-gray-400");
-      loadContacts(); // Load Data
-    }
-  }
-
-  // --- Toast System ---
-  function showToast(title, message, isError = false) {
-    const container = document.getElementById("toast-container");
-    const toast = document.createElement("div");
-
-    const bgColor = isError
-      ? "bg-red-500/10 border-red-500/20"
-      : "bg-green-500/10 border-green-500/20";
-    const iconColor = isError ? "text-red-400" : "text-green-400";
-    const iconSvg = isError
-      ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />'
-      : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />';
-
-    toast.className = `pointer-events-auto w-80 backdrop-blur-md border ${bgColor} rounded-xl p-4 shadow-2xl transform transition-all duration-500 translate-x-full opacity-0 flex items-start gap-3`;
-    toast.innerHTML = `
-          <div class="mt-0.5 shrink-0 ${iconColor}"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">${iconSvg}</svg></div>
-          <div class="flex-1"><h3 class="text-sm font-medium text-white">${title}</h3><p class="text-sm text-gray-400 mt-1 leading-relaxed">${message}</p></div>
-        `;
-    container.appendChild(toast);
-    requestAnimationFrame(() =>
-      toast.classList.remove("translate-x-full", "opacity-0"),
-    );
-    setTimeout(() => {
-      toast.classList.add("translate-x-full", "opacity-0");
-      setTimeout(() => toast.remove(), 500);
-    }, 4000);
-  }
-
-  // --- Stats & Activity ---
-  // Activity Pagination State
-  let activityPage = 1;
-  let activityLimit = 50;
-  let activitySort = "status_priority";
-
-  async function updateStats() {
-    try {
-      const response = await fetch("/api/stats", { headers });
-      if (response.status === 401) {
-        window.location.href = "/login";
-        return;
-      }
-      const data = await response.json();
-
-      // Stats
-      document.getElementById("stat-total").textContent = data.total_contacts;
-      document.getElementById("stat-pending").textContent = data.pending;
-      document.getElementById("stat-sent").textContent = data.sent;
-      document.getElementById("stat-failed").textContent = data.failed;
-
-      // Limits View
-      document.getElementById("stat-used-hour").textContent =
-        document.getElementById("stat-used-hour").textContent =
-          data.emails_sent_this_hour;
-      document.getElementById("stat-used-today").textContent =
-        data.emails_sent_today;
-
-      document.getElementById("stat-limit-hour").textContent =
-        data.hourly_limit;
-      document.getElementById("stat-limit-today").textContent =
-        data.daily_limit;
-
-      // Bars
-      const pctHour = Math.min(
-        (data.emails_sent_this_hour / data.hourly_limit) * 100,
-        100,
-      );
-      const pctDay = Math.min(
-        (data.emails_sent_today / data.daily_limit) * 100,
-        100,
-      );
-      document.getElementById("bar-used-hour").style.width = `${pctHour}%`;
-      document.getElementById("bar-used-today").style.width = `${pctDay}%`;
-
-      updateActivity();
-    } catch (e) {
-      console.error("Stats error", e);
-    }
-  }
-
-  async function updateActivity() {
-    try {
-      const params = new URLSearchParams({
-        page: activityPage,
-        limit: activityLimit,
-        sort_by: activitySort,
-      });
-      console.log("Fetching activity with:", {
-        page: activityPage,
-        limit: activityLimit,
-        sort_by: activitySort,
-      });
-      const res = await fetch(`/api/activity?${params}`, { headers });
-      const data = await res.json();
-      const tbody = document.getElementById("activity-table-body");
-      tbody.innerHTML = "";
-
-      if (!data.contacts || data.contacts.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-gray-600 text-sm">No recent activity</td></tr>`;
-        document.getElementById("activity-showing").textContent =
-          "Showing 0 of 0";
-        document.getElementById("activity-current-page").textContent = "1";
-        document.getElementById("activity-total-pages").textContent = "1";
-        document.getElementById("activity-prev").disabled = true;
-        document.getElementById("activity-next").disabled = true;
-        return;
-      }
-
-      data.contacts.forEach((row) => {
-        const tr = document.createElement("tr");
-        tr.className = "hover:bg-white/[0.02] transition-colors group";
-
-        let statusBadge = "";
-        if (row.status === "sent")
-          statusBadge =
-            '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20">Sent</span>';
-        else if (row.status === "failed")
-          statusBadge =
-            '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">Failed</span>';
-        else if (row.status === "processing")
-          statusBadge =
-            '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 animate-pulse">Sending...</span>';
-        else
-          statusBadge =
-            '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-500/10 text-gray-400 border border-gray-500/20">Pending</span>';
-
-        // Format Time - show different timestamp based on sort
-        const sortBy = document.getElementById("activity-sort").value;
-        let displayDate;
-        if (sortBy === "newest") {
-          displayDate = new Date(
-            row.created_at.endsWith("Z")
-              ? row.created_at
-              : row.created_at + "Z",
-          );
-        } else {
-          displayDate = new Date(
-            row.updated_at.endsWith("Z")
-              ? row.updated_at
-              : row.updated_at + "Z",
-          );
-        }
-        const timeStr = displayDate.toLocaleString([], {
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        });
-
-        tr.innerHTML = `
-                 <td class="px-6 py-4 text-white font-medium">${row.email}</td>
-                 <td class="px-6 py-4 text-gray-400">${row.name || "-"}</td>
-                 <td class="px-6 py-4">${statusBadge}</td>
-                 <td class="px-6 py-4 text-gray-500 text-xs font-mono">${timeStr}</td>
-                 <td class="px-6 py-4 text-right">
-                   ${
-                     row.status === "failed" || row.status === "sent"
-                       ? `<button onclick="resendEmail('${row.email}')" class="text-blue-400 hover:text-white text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">Resend</button>`
-                       : ""
-                   }
-                 </td>
-               `;
-        tbody.appendChild(tr);
-      });
-
-      // Update pagination info
-      const start = (data.page - 1) * data.limit + 1;
-      const end = Math.min(data.page * data.limit, data.total);
-      document.getElementById("activity-showing").textContent =
-        `Showing ${start}-${end} of ${data.total}`;
-      document.getElementById("activity-current-page").textContent = data.page;
-      document.getElementById("activity-total-pages").textContent = data.pages;
-
-      // Update button states
-      document.getElementById("activity-prev").disabled = data.page <= 1;
-      document.getElementById("activity-next").disabled =
-        data.page >= data.pages;
-    } catch (e) {
-      console.error(e);
-    }
-  }
-
-  window.changeActivityPage = function (delta) {
-    activityPage += delta;
-    if (activityPage < 1) activityPage = 1;
-    updateActivity();
-  };
-
-  window.changeActivitySort = function () {
-    activitySort = document.getElementById("activity-sort").value;
-    activityPage = 1; // Reset to first page when sorting changes
-    console.log("Sort changed to:", activitySort);
-    updateActivity();
-  };
-
-  window.changeActivityLimit = function () {
-    activityLimit = parseInt(document.getElementById("activity-limit").value);
-    activityPage = 1; // Reset to first page when limit changes
-    console.log("Limit changed to:", activityLimit);
-    updateActivity();
-  };
-
-  async function resendEmail(email) {
-    if (!confirm(`Resend to ${email}?`)) return;
-    try {
-      const res = await fetch(`/api/resend/${email}`, {
-        method: "POST",
-        headers,
-      });
-      if (res.ok) {
-        showToast("Queued", `Resending to ${email}`);
-        updateStats();
-      } else showToast("Error", "Failed to resend", true);
-    } catch (e) {
-      showToast("Error", "Network error", true);
-    }
-  }
-
-  // --- Settings & Init ---
-  async function loadSettings() {
-    try {
-      const res = await fetch("/api/settings", { headers });
-      if (res.status === 401) return;
-      const data = await res.json();
-
-      const setVal = (n, v) => {
-        const el = document.querySelector(`[name="${n}"]`);
-        if (el) el.value = v || "";
-      };
-      setVal("brevo_api_key", data.brevo_api_key);
-      setVal("sender_email", data.sender_email);
-      setVal("sender_name", data.sender_name);
-      setVal("subject", data.subject);
-      setVal("hourly_limit", data.hourly_limit);
-      setVal("daily_limit", data.daily_limit);
-
-      loadTemplates(data.selected_template);
-    } catch (e) {
-      console.error(e);
-    }
-  }
-
-  async function loadTemplates(selected) {
-    try {
-      const res = await fetch("/api/templates", { headers });
-      const data = await res.json();
-      const el = document.getElementById("selected_template");
-      el.innerHTML = '<option value="">Select template...</option>';
-      data.templates.forEach((t) => {
-        const opt = document.createElement("option");
-        opt.value = t;
-        opt.textContent = t;
-        if (t === selected) opt.selected = true;
-        el.appendChild(opt);
-      });
-    } catch (e) {}
-  }
-
-  // --- Uploads ---
-  const dropZone = document.getElementById("drop-zone");
-  const fileInput = document.getElementById("file-upload");
-
-  if (dropZone && fileInput) {
-    dropZone.addEventListener("click", () => fileInput.click());
-    dropZone.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      dropZone.classList.add("border-blue-500");
-    });
-    dropZone.addEventListener("dragleave", () => {
-      dropZone.classList.remove("border-blue-500");
-    });
-    dropZone.addEventListener("drop", (e) => {
-      e.preventDefault();
-      dropZone.classList.remove("border-blue-500");
-      if (e.dataTransfer.files[0]) handleUpload(e.dataTransfer.files[0]);
-    });
-    fileInput.addEventListener("change", () => {
-      if (fileInput.files[0]) handleUpload(fileInput.files[0]);
-    });
-  }
-
-  // Activity controls event listeners
-  document
-    .getElementById("activity-sort")
-    ?.addEventListener("change", changeActivitySort);
-  document
-    .getElementById("activity-limit")
-    ?.addEventListener("change", changeActivityLimit);
-
-  async function handleUpload(file) {
-    const formData = new FormData();
-    formData.append("file", file);
-    document.getElementById("upload-progress").classList.remove("hidden");
-
-    try {
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        headers,
-        body: formData,
-      });
-      const data = await res.json();
-      if (res.ok) {
-        showToast("Imported", data.message);
-        updateStats();
-        // If in contacts view, reload contacts
-        if (
-          !document.getElementById("view-contacts").classList.contains("hidden")
-        ) {
-          loadContacts();
-        }
-      } else showToast("Failed", data.detail || "Error", true);
-    } catch (e) {
-      showToast("Error", "Network error", true);
-    } finally {
-      document.getElementById("upload-progress").classList.add("hidden");
-    }
-  }
-
-  async function uploadTemplate(input) {
-    if (!input.files[0]) return;
-    const formData = new FormData();
-    formData.append("file", input.files[0]);
-    try {
-      const res = await fetch("/api/templates/upload", {
-        method: "POST",
-        headers,
-        body: formData,
-      });
-      const data = await res.json();
-      if (res.ok) {
-        showToast("Uploaded", data.filename);
-        loadTemplates(data.filename);
-      } else showToast("Failed", data.detail, true);
-    } catch (e) {
-      showToast("Error", "Network error", true);
-    }
-    input.value = "";
-  }
-
-  document
-    .getElementById("settings-form")
-    .addEventListener("submit", async (e) => {
-      e.preventDefault();
-      try {
-        const res = await fetch("/api/settings", {
-          method: "POST",
-          headers,
-          body: new FormData(e.target),
-        });
-        if (res.ok) {
-          showToast("Saved", "Configuration updated");
-          updateStats();
-        } else showToast("Error", "Failed to save", true);
-      } catch (e) {
-        showToast("Error", "Network error", true);
-      }
-    });
-
-  // --- Contact Management ---
-  function debounceSearch() {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      currentSearch = document.getElementById("contact-search").value;
-      currentPage = 1;
-      loadContacts();
-    }, 300);
-  }
-
-  function changePage(delta) {
-    currentPage += delta;
-    loadContacts();
-  }
-
-  async function loadContacts() {
-    const tbody = document.getElementById("contacts-table-body");
-
-    // Show Loading
-    // tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-gray-600">Loading...</td></tr>`;
-
-    try {
-      const url = `/api/contacts?page=${currentPage}&limit=${currentLimit}&search=${encodeURIComponent(
-        currentSearch,
-      )}`;
-      const res = await fetch(url, { headers });
-      const data = await res.json();
-
-      tbody.innerHTML = "";
-      if (data.contacts.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-gray-600 text-sm">No contacts found</td></tr>`;
-      } else {
-        data.contacts.forEach((c) => {
-          const tr = document.createElement("tr");
-          tr.className = "hover:bg-white/[0.02] transition-colors group";
-
-          let statusColor = "text-gray-400";
-          if (c.status === "sent") statusColor = "text-green-400";
-          if (c.status === "failed") statusColor = "text-red-400";
-
-          tr.innerHTML = `
-                        <td class="px-6 py-4 text-white font-medium">${
-                          c.name || "-"
-                        }</td>
-                        <td class="px-6 py-4 text-gray-400">${c.email}</td>
-                        <td class="px-6 py-4 uppercase text-xs font-semibold ${statusColor}">${
-                          c.status
-                        }</td>
-                        <td class="px-6 py-4 text-right gap-2 flex justify-end">
-                            <button onclick="openEditModal(${
-                              c.id
-                            }, '${c.name.replace(/'/g, "\\'")}', '${
-                              c.email
-                            }')" class="text-blue-400 hover:text-white px-2 py-1 hover:bg-white/10 rounded transition-colors">Edit</button>
-                            <button onclick="deleteContact(${
-                              c.id
-                            })" class="text-red-400 hover:text-white px-2 py-1 hover:bg-red-500/10 rounded transition-colors">Delete</button>
-                        </td>
-                    `;
-          tbody.appendChild(tr);
-        });
-      }
-
-      // Pagination Controls
-      document.getElementById("pagination-info").textContent = `Page ${
-        data.page
-      } of ${data.pages || 1} (${data.total} total)`;
-      document.getElementById("btn-prev").disabled = data.page <= 1;
-      document.getElementById("btn-next").disabled = data.page >= data.pages;
-    } catch (e) {
-      console.error(e);
-      tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-red-400 text-sm">Error loading contacts</td></tr>`;
-    }
-  }
-
-  // Modal Logic
-  function openEditModal(id, name, email) {
-    document.getElementById("edit-id").value = id;
-    document.getElementById("edit-name").value = name;
-    document.getElementById("edit-email").value = email;
-    const modal = document.getElementById("edit-modal");
-    modal.classList.remove("hidden");
-    requestAnimationFrame(() => modal.classList.remove("opacity-0"));
-    document.getElementById("edit-modal-content").classList.remove("scale-95");
-  }
-
-  function closeEditModal() {
-    const modal = document.getElementById("edit-modal");
-    modal.classList.add("opacity-0");
-    document.getElementById("edit-modal-content").classList.add("scale-95");
-    setTimeout(() => modal.classList.add("hidden"), 300);
-  }
-
-  document.getElementById("edit-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const id = document.getElementById("edit-id").value;
-    const formData = new FormData(e.target);
-
-    try {
-      const res = await fetch(`/api/contacts/${id}`, {
-        method: "PUT",
-        headers,
-        body: formData,
-      });
-      if (res.ok) {
-        showToast("Success", "Contact updated");
-        closeEditModal();
-        loadContacts();
-      } else {
-        showToast("Error", "Update failed", true);
-      }
-    } catch (e) {
-      showToast("Error", "Network error", true);
-    }
-  });
-
-  async function deleteContact(id) {
-    if (!confirm("Delete this contact?")) return;
-    try {
-      const res = await fetch(`/api/contacts/${id}`, {
-        method: "DELETE",
-        headers,
-      });
-      if (res.ok) {
-        showToast("Deleted", "Contact removed");
-        loadContacts();
-        updateStats();
-      } else showToast("Error", "Delete failed", true);
-    } catch (e) {
-      showToast("Error", "Network error", true);
-    }
-  }
-
-  async function deleteAllContacts() {
-    if (
-      !confirm(
-        "WARNING: This will delete ALL your contacts. This cannot be undone.",
-      )
-    )
-      return;
-    try {
-      const res = await fetch(`/api/contacts`, { method: "DELETE", headers });
-      const data = await res.json();
-      if (res.ok) {
-        showToast("Cleared", data.message);
-        loadContacts();
-        updateStats();
-      } else showToast("Error", "Process failed", true);
-    } catch (e) {
-      showToast("Error", "Network error", true);
-    }
-  }
-
-  function logout() {
-    localStorage.removeItem("token");
-    window.location.href = "/";
-  }
-
-  // Init
-  loadSettings();
-  switchView("dashboard"); // Start on dashboard
-  setInterval(updateStats, 5000);
-</script>
-{% endblock %} ```
+<script defer src="/static/dashboard-app.js?v=3"></script>
+{% endblock %}

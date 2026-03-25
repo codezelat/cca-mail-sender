@@ -6,6 +6,7 @@ from datetime import timedelta
 from app.database import get_session
 from app.models import User, UserSettings
 from app.auth import get_password_hash, verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from app.services.template_service import ensure_default_template_for_user
 
 router = APIRouter()
 
@@ -39,6 +40,9 @@ async def signup(user_data: OAuth2PasswordRequestForm = Depends(), session: Sess
     settings = UserSettings(user_id=new_user.id or 0)
     session.add(settings)
     session.commit()
+
+    session.refresh(new_user)
+    ensure_default_template_for_user(session, new_user)
 
     return {"status": "success", "message": "User created successfully"}
 

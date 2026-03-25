@@ -1,13 +1,16 @@
-import time
 import logging
 import threading
-import os
-from datetime import datetime, timedelta
+import time
+from datetime import datetime
+from typing import Optional
+
 from sqlmodel import Session, select
+
 from app.database import engine
-from app.models import User, UserSettings, Contact, Job
+from app.models import CampaignBatch, CampaignRecipient, Contact, EmailTemplateVersion, User
 from app.services.brevo_service import BrevoService
-from jinja2 import Template
+from app.services.import_service import sync_batch_status
+from app.services.template_service import render_template_html, render_template_version
 
 logger = logging.getLogger(__name__)
 
@@ -19,219 +22,222 @@ class SchedulerService:
 
     def start(self):
         logger.info("Starting Scheduler Service...")
-        self._thread.start()
+        if not self._thread.is_alive():
+            self._thread = threading.Thread(target=self._run_loop, daemon=True)
+            self._thread.start()
 
     def stop(self):
         logger.info("Stopping Scheduler Service...")
         self._stop_event.set()
-        self._thread.join()
-
-    def _get_email_template(self, template_name: str = "mail.html"):
-        # Read from data/templates
-        path = os.path.join("data/templates", template_name)
-        if os.path.exists(path):
-            with open(path, "r", encoding="utf-8") as f:
-                return f.read()
-
-        # Fallback to root mail.html if data/templates one missing
-        if os.path.exists("mail.html"):
-            with open("mail.html", "r", encoding="utf-8") as f:
-                return f.read()
-
-        return "<html><body><p>Hello {{ name }}, check this out!</p></body></html>"
+        if self._thread.is_alive():
+            self._thread.join()
 
     def _run_loop(self):
         logger.info("Scheduler loop started.")
         while not self._stop_event.is_set():
             try:
                 with Session(engine) as session:
-                    # Fetch all users who have settings configured
-                    # We might want to filter active users only, but for now take all.
-                    # This approach might be slow if 1000s of users, but okay for MVP.
-                    # Ideally we query for "Pending Contacts" and join User/Settings.
-
-                    # Alternative approach: Get all pending contacts, group by user?
-                    # Or round-robin users?
-
-                    # For simplicity:
-                    # 1. Get List of Users with Settings
-                    users_with_settings = session.exec(select(User)).all()
-
                     processed_any = False
-
-                    for user in users_with_settings:
+                    users = session.exec(select(User)).all()
+                    for user in users:
                         if not user.settings or not user.settings.brevo_api_key:
                             continue
 
-                        settings = user.settings
-
-                        # Refresh limits logic (per user)
-                        now = datetime.utcnow()
-
-                        # Initialize windows
-                        if not settings.current_day_window_start:
-                            settings.current_day_window_start = now
-                            settings.emails_sent_today = 0
-                        if not settings.current_hour_window_start:
-                            settings.current_hour_window_start = now
-                            settings.emails_sent_this_hour = 0
-
-                        # Reset Day
-                        if now.date() > settings.current_day_window_start.date():
-                            settings.emails_sent_today = 0
-                            settings.current_day_window_start = now
-                            session.add(settings)
-
-                        # Reset Hour
-                        if (now - settings.current_hour_window_start).total_seconds() > 3600:
-                            settings.emails_sent_this_hour = 0
-                            settings.current_hour_window_start = now
-                            session.add(settings)
-
-                        session.commit()
-                        session.refresh(settings)
-
-                        # Check Limits
-                        if settings.emails_sent_today >= settings.daily_limit:
-                            continue
-                        if settings.emails_sent_this_hour >= settings.hourly_limit:
+                        self._refresh_windows(session, user)
+                        if self._limits_exhausted(user):
                             continue
 
-                        # Fetch 1 Pending Contact for this User
-                        contact = session.exec(
-                            select(Contact)
-                            .where(Contact.user_id == user.id)
-                            .where(Contact.status == "pending")
+                        recipient = session.exec(
+                            select(CampaignRecipient)
+                            .where(CampaignRecipient.user_id == user.id)
+                            .where(CampaignRecipient.status == "queued")
+                            .order_by(CampaignRecipient.created_at.asc())
                             .limit(1)
                         ).first()
 
-                        if not contact:
+                        if not recipient:
                             continue
 
-                        processed_any = True
+                        batch = session.get(CampaignBatch, recipient.batch_id)
+                        if not batch:
+                            recipient.status = "failed"
+                            recipient.error_message = "Batch not found."
+                            recipient.updated_at = datetime.utcnow()
+                            session.add(recipient)
+                            session.commit()
+                            continue
 
-                        # Process Contact
-                        contact.status = "processing"
-                        contact.updated_at = datetime.utcnow()
-                        session.add(contact)
+                        batch.status = "processing"
+                        batch.updated_at = datetime.utcnow()
+                        recipient.status = "processing"
+                        recipient.updated_at = datetime.utcnow()
+                        session.add(batch)
+                        session.add(recipient)
                         session.commit()
-                        session.refresh(contact)
+                        session.refresh(recipient)
 
-                        logger.info(
-                            f"Processing contact {contact.email} for user {user.email}")
-
-                        # Initialize Service with User's Key
-                        brevo = BrevoService(
-                            settings.brevo_api_key, settings.sender_email, settings.sender_name or "Sender")
-
-                        # EXECUTE SENDING LOGIC (Same as before)
-                        # ...
-                        # To avoid huge indentation drift, I will call a helper or inline it cleanly.
-                        self._process_single_contact(
-                            session, brevo, contact, settings)
+                        processed_any = True
+                        self._process_recipient(session, user, batch, recipient)
 
                     if not processed_any:
                         time.sleep(2)
-
-            except Exception as e:
-                logger.error(f"Scheduler global loop error: {e}")
+            except Exception as exc:
+                logger.exception("Scheduler global loop error: %s", exc)
                 time.sleep(5)
 
-    def _process_single_contact(self, session, brevo, contact, settings):
-        try:
-            # 1. Add Contact
-            success, error = brevo.create_contact(contact.email, contact.name)
-            if not success:
-                logger.error(
-                    f"Failed to create contact {contact.email}: {error}")
-                contact.status = "failed"
-                contact.error_message = f"Create Contact Failed: {error}"
-                contact.updated_at = datetime.utcnow()
-                session.add(contact)
-                session.commit()
-                return
+    def _refresh_windows(self, session: Session, user: User):
+        settings = user.settings
+        if not settings:
+            return
 
-            time.sleep(1)
+        now = datetime.utcnow()
+        if not settings.current_day_window_start:
+            settings.current_day_window_start = now
+            settings.emails_sent_today = 0
+        if not settings.current_hour_window_start:
+            settings.current_hour_window_start = now
+            settings.emails_sent_this_hour = 0
 
-            # 3. Send Email
-            template_str = self._get_email_template(
-                settings.selected_template or "mail.html")
-            try:
-                template = Template(template_str)
-                # Prepare display name
-                display_name = contact.name
-                if display_name and display_name.lower() != "there":
-                    display_name = display_name.title()
-                else:
-                    display_name = "There"
+        if now.date() > settings.current_day_window_start.date():
+            settings.emails_sent_today = 0
+            settings.current_day_window_start = now
 
-                html_content = template.render(
-                    name=display_name, email=contact.email)
-            except Exception:
-                html_content = template_str
+        if (now - settings.current_hour_window_start).total_seconds() >= 3600:
+            settings.emails_sent_this_hour = 0
+            settings.current_hour_window_start = now
 
-            success, msg_id = brevo.send_email(
-                contact.email, contact.name, settings.subject or "Hello", html_content)
-            if not success:
-                logger.error(
-                    f"Failed to send email to {contact.email}: {msg_id}")
-                contact.status = "failed"
-                contact.error_message = f"Send Email Failed: {msg_id}"
-                contact.updated_at = datetime.utcnow()
-                brevo.delete_contact(contact.email)
-                session.add(contact)
-                session.commit()
-                return
+        session.add(settings)
+        session.commit()
 
-            logger.info(f"Email sent to {contact.email}. Message ID: {msg_id}")
+    def _limits_exhausted(self, user: User) -> bool:
+        settings = user.settings
+        if not settings:
+            return True
+        if settings.emails_sent_today >= settings.daily_limit:
+            return True
+        if settings.emails_sent_this_hour >= settings.hourly_limit:
+            return True
+        return False
 
-            # 4. Wait for delivery confirmation (Polling)
-            max_retries = 10
-            ready_to_delete = False
+    def _mark_failed(
+        self,
+        session: Session,
+        recipient: CampaignRecipient,
+        batch: CampaignBatch,
+        contact: Optional[Contact],
+        message: str,
+    ):
+        recipient.status = "failed"
+        recipient.error_message = message
+        recipient.updated_at = datetime.utcnow()
+        session.add(recipient)
 
-            for i in range(max_retries):
-                time.sleep(3)
-                status_data = brevo.get_email_status(msg_id)
-
-                if status_data:
-                    events = status_data.get("events", [])
-                    event_names = [e.get("name") for e in events]
-
-                    if "delivered" in event_names:
-                        ready_to_delete = True
-                        break
-                    if "bounced" in event_names or "error" in event_names or "soft_bounce" in event_names:
-                        logger.error(
-                            f"Email bounced/failed for {contact.email}")
-                        contact.error_message = f"Bounced/Failed: {event_names}"
-                        ready_to_delete = True
-                        break
-                    if "request" in event_names:
-                        if i == max_retries - 1:
-                            ready_to_delete = True
-
-            # 5. Delete Contact
-            del_success, del_err = brevo.delete_contact(contact.email)
-
-            # Update DB
-            contact.status = "sent"
-            contact.error_message = f"Message ID: {msg_id}"
-            contact.updated_at = datetime.utcnow()
-            if not ready_to_delete:
-                contact.error_message += " (Timeout waiting for delivery)"
-
-            settings.emails_sent_today += 1
-            settings.emails_sent_this_hour += 1
-            settings.last_run = datetime.utcnow()
-
-            session.add(contact)
-            session.add(settings)
-            session.commit()
-
-        except Exception as e:
-            logger.error(f"Error processing contact {contact.email}: {e}")
-            contact.status = "failed"
-            contact.error_message = f"Internal Error: {str(e)}"
+        if contact:
+            contact.last_delivery_status = "failed"
+            contact.last_delivery_error = message
             contact.updated_at = datetime.utcnow()
             session.add(contact)
+
+        batch.updated_at = datetime.utcnow()
+        session.add(batch)
+        session.commit()
+        sync_batch_status(session, batch)
+
+    def _process_recipient(
+        self,
+        session: Session,
+        user: User,
+        batch: CampaignBatch,
+        recipient: CampaignRecipient,
+    ):
+        settings = user.settings
+        version = session.get(EmailTemplateVersion, recipient.template_version_id)
+        contact = session.get(Contact, recipient.contact_id) if recipient.contact_id else None
+
+        if not settings or not settings.sender_email:
+            self._mark_failed(
+                session,
+                recipient,
+                batch,
+                contact,
+                "Sender configuration is incomplete.",
+            )
+            return
+
+        if contact and contact.unsubscribed_at:
+            recipient.status = "unsubscribed"
+            recipient.error_message = "Recipient unsubscribed."
+            recipient.updated_at = datetime.utcnow()
+            session.add(recipient)
             session.commit()
+            sync_batch_status(session, batch)
+            return
+
+        if not version:
+            self._mark_failed(session, recipient, batch, contact, "Template version not found.")
+            return
+
+        brevo = BrevoService(
+            settings.brevo_api_key,
+            batch.sender_email_snapshot or settings.sender_email,
+            batch.sender_name_snapshot or settings.sender_name or "Sender",
+        )
+
+        payload = recipient.payload_json or {}
+        rendered_html = render_template_version(version, payload, user_id=user.id)
+        rendered_subject = render_template_html(
+            version.subject, payload, user_id=user.id
+        ).strip()
+
+        success, error = brevo.create_contact(recipient.email, recipient.name or "There")
+        if not success:
+            self._mark_failed(
+                session,
+                recipient,
+                batch,
+                contact,
+                f"Create Contact Failed: {error}",
+            )
+            return
+
+        success, message_id = brevo.send_email(
+            recipient.email,
+            recipient.name or "There",
+            rendered_subject or version.subject,
+            rendered_html,
+        )
+        if not success:
+            brevo.delete_contact(recipient.email)
+            self._mark_failed(
+                session,
+                recipient,
+                batch,
+                contact,
+                f"Send Email Failed: {message_id}",
+            )
+            return
+
+        recipient.status = "sent"
+        recipient.message_id = message_id
+        recipient.error_message = None
+        recipient.delivered_at = datetime.utcnow()
+        recipient.updated_at = datetime.utcnow()
+        session.add(recipient)
+
+        if contact:
+            contact.last_delivery_status = "sent"
+            contact.last_delivery_error = f"Message ID: {message_id}"
+            contact.updated_at = datetime.utcnow()
+            session.add(contact)
+
+        settings.emails_sent_today += 1
+        settings.emails_sent_this_hour += 1
+        settings.last_run = datetime.utcnow()
+        session.add(settings)
+
+        batch.updated_at = datetime.utcnow()
+        session.add(batch)
+        session.commit()
+
+        sync_batch_status(session, batch)
+        brevo.delete_contact(recipient.email)

@@ -1,9 +1,15 @@
+import os
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from contextlib import asynccontextmanager
-from app.database import create_db_and_tables
+from sqlmodel import Session, select
+
+from app.database import create_db_and_tables, engine
+from app.models import User
 from app.routers import pages, api, auth_routes
 from app.services.scheduler_service import SchedulerService
+from app.services.template_service import ensure_default_template_for_user
 import logging
 
 # Setup Logger
@@ -19,6 +25,13 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Initializing Database...")
     create_db_and_tables()
+    os.makedirs(os.path.join("data", "public_assets"), exist_ok=True)
+
+    logger.info("Bootstrapping templates...")
+    with Session(engine) as session:
+        users = session.exec(select(User)).all()
+        for user in users:
+            ensure_default_template_for_user(session, user)
 
     logger.info("Starting Scheduler...")
     scheduler.start()
@@ -38,6 +51,11 @@ app.include_router(auth_routes.router)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount(
+    "/public-assets",
+    StaticFiles(directory=os.path.join("data", "public_assets")),
+    name="public-assets",
+)
 
 if __name__ == "__main__":
     import uvicorn
