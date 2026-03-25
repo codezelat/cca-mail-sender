@@ -176,7 +176,10 @@ const BLOCK_FIELD_CONFIG = {
 };
 
 async function api(path, options = {}) {
-  const requestOptions = { ...options, headers: { ...authHeaders, ...(options.headers || {}) } };
+  const requestOptions = {
+    ...options,
+    headers: { ...authHeaders, ...(options.headers || {}) },
+  };
   if (requestOptions.body && !(requestOptions.body instanceof FormData)) {
     requestOptions.headers["Content-Type"] = "application/json";
     requestOptions.body = JSON.stringify(requestOptions.body);
@@ -195,7 +198,8 @@ async function api(path, options = {}) {
     : await response.text();
 
   if (!response.ok) {
-    const detail = typeof data === "string" ? data : data.detail || "Request failed";
+    const detail =
+      typeof data === "string" ? data : data.detail || "Request failed";
     throw new Error(detail);
   }
 
@@ -237,7 +241,8 @@ function statusBadge(status) {
     completed: "bg-emerald-400/10 text-emerald-200 border-emerald-400/20",
     completed_with_errors: "bg-rose-400/10 text-rose-200 border-rose-400/20",
   };
-  const cls = styles[status] || "bg-slate-400/10 text-slate-200 border-slate-400/20";
+  const cls =
+    styles[status] || "bg-slate-400/10 text-slate-200 border-slate-400/20";
   return `<span class="inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] ${cls}">${escapeHtml(status || "unknown")}</span>`;
 }
 
@@ -249,8 +254,8 @@ function switchView(view) {
   document.querySelectorAll(".view-trigger").forEach((button) => {
     const active = button.dataset.viewTrigger === view;
     button.className = active
-      ? "view-trigger rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950 transition"
-      : "view-trigger rounded-full px-4 py-2 text-sm font-medium text-slate-300 transition hover:text-white";
+      ? "view-trigger rounded-full border border-sky-300/35 bg-sky-400/15 px-4 py-2 text-sm font-semibold text-sky-100 transition"
+      : "view-trigger rounded-full border border-transparent px-4 py-2 text-sm font-medium text-slate-300 transition hover:border-white/20 hover:text-white";
   });
 }
 
@@ -278,7 +283,8 @@ function ensureBuilderDesign() {
   const design = currentDesign();
   if (!design.content_width) design.content_width = 600;
   if (!design.body_background_color) design.body_background_color = "#030712";
-  if (!design.content_background_color) design.content_background_color = "#ffffff";
+  if (!design.content_background_color)
+    design.content_background_color = "#ffffff";
   return design;
 }
 
@@ -298,14 +304,17 @@ function createBlock(type) {
 
 function updateStatsUI() {
   const stats = state.stats || {};
-  document.getElementById("stat-total-contacts").textContent = stats.total_contacts || 0;
+  document.getElementById("stat-total-contacts").textContent =
+    stats.total_contacts || 0;
   document.getElementById("stat-templates").textContent = stats.templates || 0;
   document.getElementById("stat-batches").textContent = stats.batches || 0;
   document.getElementById("stat-queued").textContent = stats.queued || 0;
   document.getElementById("stat-sent").textContent = stats.sent || 0;
   document.getElementById("stat-failed").textContent = stats.failed || 0;
-  document.getElementById("usage-hour").textContent = stats.emails_sent_this_hour || 0;
-  document.getElementById("usage-day").textContent = stats.emails_sent_today || 0;
+  document.getElementById("usage-hour").textContent =
+    stats.emails_sent_this_hour || 0;
+  document.getElementById("usage-day").textContent =
+    stats.emails_sent_today || 0;
   document.getElementById("limit-hour").textContent = stats.hourly_limit || 0;
   document.getElementById("limit-day").textContent = stats.daily_limit || 0;
 }
@@ -351,7 +360,10 @@ function renderTemplateSelectors() {
     const option = document.createElement("option");
     option.value = template.id;
     option.textContent = `${template.name} · v${template.published_version.version_number}`;
-    if (!launchSelect.value && template.id === state.settings.default_template_id) {
+    if (
+      !launchSelect.value &&
+      template.id === state.settings.default_template_id
+    ) {
       option.selected = true;
     }
     launchSelect.appendChild(option);
@@ -363,7 +375,8 @@ function renderTemplateSelectors() {
 function renderTemplateList() {
   const list = document.getElementById("template-list");
   if (!state.templates.length) {
-    list.innerHTML = '<div class="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-500">No templates yet.</div>';
+    list.innerHTML =
+      '<div class="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-500">No templates yet.</div>';
     return;
   }
 
@@ -377,7 +390,9 @@ function renderTemplateList() {
         : "";
       return `
         <button data-template-id="${template.id}" class="template-list-item w-full rounded-3xl border ${
-          selected ? "border-sky-400/40 bg-sky-400/10" : "border-white/10 bg-slate-950/40"
+          selected
+            ? "border-sky-400/40 bg-sky-400/10"
+            : "border-white/10 bg-slate-950/40"
         } p-4 text-left transition hover:border-sky-400/30 hover:bg-sky-400/5">
           <div class="flex items-start justify-between gap-3">
             <div>
@@ -397,16 +412,21 @@ function renderTemplateList() {
     .join("");
 
   document.querySelectorAll(".template-list-item").forEach((button) => {
-    button.addEventListener("click", () => loadTemplateDetail(Number(button.dataset.templateId)));
+    button.addEventListener("click", () =>
+      loadTemplateDetail(Number(button.dataset.templateId)),
+    );
   });
 }
 
 function updateCampaignTemplateHint() {
-  const selectedId = Number(document.getElementById("campaign-template-select").value || 0);
+  const selectedId = Number(
+    document.getElementById("campaign-template-select").value || 0,
+  );
   const template = state.templates.find((item) => item.id === selectedId);
   const hint = document.getElementById("campaign-template-hint");
   if (!template?.published_version) {
-    hint.textContent = "Select a published template to unlock import validation.";
+    hint.textContent =
+      "Select a published template to unlock import validation.";
     return;
   }
   hint.textContent = `Published version ${template.published_version.version_number} · Subject: ${template.published_version.subject}`;
@@ -421,8 +441,13 @@ async function loadTemplates(preserveSelection = true) {
   const data = await api("/api/templates");
   state.templates = data.templates || [];
   if (!preserveSelection || !state.selectedTemplateId) {
-    state.selectedTemplateId = state.settings.default_template_id || state.templates[0]?.id || null;
-  } else if (!state.templates.some((template) => template.id === state.selectedTemplateId)) {
+    state.selectedTemplateId =
+      state.settings.default_template_id || state.templates[0]?.id || null;
+  } else if (
+    !state.templates.some(
+      (template) => template.id === state.selectedTemplateId,
+    )
+  ) {
     state.selectedTemplateId = state.templates[0]?.id || null;
   }
   renderTemplateSelectors();
@@ -437,7 +462,8 @@ async function loadTemplates(preserveSelection = true) {
 function renderTemplateWorkspaceEmpty() {
   state.selectedTemplate = null;
   state.selectedBlockId = null;
-  document.getElementById("template-editor-title").textContent = "Select a template";
+  document.getElementById("template-editor-title").textContent =
+    "Select a template";
   document.getElementById("template-editor-meta").textContent =
     "Choose a template from the library to open its draft workspace.";
   document.getElementById("builder-block-list").innerHTML =
@@ -458,8 +484,12 @@ async function loadTemplateDetail(templateId, preserveScroll = false) {
   state.selectedTemplateId = templateId;
   const data = await api(`/api/templates/${templateId}`);
   state.selectedTemplate = data.template;
-  state.templateEditorMode = state.selectedTemplate?.draft_version?.editor_mode || state.selectedTemplate?.editor_mode || "builder";
-  state.activeTemplateTab = state.templateEditorMode === "code" ? "code" : "design";
+  state.templateEditorMode =
+    state.selectedTemplate?.draft_version?.editor_mode ||
+    state.selectedTemplate?.editor_mode ||
+    "builder";
+  state.activeTemplateTab =
+    state.templateEditorMode === "code" ? "code" : "design";
   state.templateValidationErrors = [];
   const blocks = currentDesign().blocks || [];
   state.selectedBlockId = blocks[0]?.id || null;
@@ -505,8 +535,10 @@ function renderTemplateEditor() {
   `;
   document.getElementById("template-subject").value = draft?.subject || "";
   document.getElementById("template-preheader").value = draft?.preheader || "";
-  document.getElementById("template-html-source").value = draft?.html_source || "";
-  document.getElementById("template-validation-banner").innerHTML = state.templateValidationErrors.length
+  document.getElementById("template-html-source").value =
+    draft?.html_source || "";
+  document.getElementById("template-validation-banner").innerHTML = state
+    .templateValidationErrors.length
     ? `<span class="rounded-full border border-rose-400/20 bg-rose-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-rose-200">${state.templateValidationErrors.length} validation issue(s)</span>`
     : '<span class="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-200">Draft ready</span>';
 
@@ -521,11 +553,14 @@ function renderTemplateTabs() {
   document.querySelectorAll(".template-tab-panel").forEach((panel) => {
     panel.classList.add("hidden");
   });
-  document.getElementById(`template-tab-${state.activeTemplateTab || "design"}`).classList.remove("hidden");
+  document
+    .getElementById(`template-tab-${state.activeTemplateTab || "design"}`)
+    .classList.remove("hidden");
   document.querySelectorAll(".template-tab").forEach((button) => {
-    const active = button.dataset.templateTab === (state.activeTemplateTab || "design");
+    const active =
+      button.dataset.templateTab === (state.activeTemplateTab || "design");
     button.className = active
-      ? "template-tab rounded-full border border-white/10 bg-white px-4 py-2 text-sm font-semibold text-slate-950"
+      ? "template-tab rounded-full border border-sky-300/35 bg-sky-400/15 px-4 py-2 text-sm font-semibold text-sky-100"
       : "template-tab rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-medium text-slate-300";
   });
 }
@@ -551,7 +586,9 @@ function renderBuilderBlocks() {
         block.type;
       return `
         <div class="rounded-3xl border ${
-          selected ? "border-sky-400/40 bg-sky-400/10" : "border-white/10 bg-slate-950/40"
+          selected
+            ? "border-sky-400/40 bg-sky-400/10"
+            : "border-white/10 bg-slate-950/40"
         } p-4">
           <div class="flex items-start justify-between gap-4">
             <button data-select-block="${block.id}" class="flex-1 text-left">
@@ -584,7 +621,9 @@ function renderBuilderBlocks() {
     button.addEventListener("click", () => moveBlock(button.dataset.moveBlock));
   });
   container.querySelectorAll("[data-delete-block]").forEach((button) => {
-    button.addEventListener("click", () => deleteBlock(button.dataset.deleteBlock));
+    button.addEventListener("click", () =>
+      deleteBlock(button.dataset.deleteBlock),
+    );
   });
 }
 
@@ -596,7 +635,10 @@ function schemaFieldOptions() {
 
 function renderFieldInput(field, value) {
   if (field.type === "textarea" || field.type === "json") {
-    const displayValue = field.type === "json" ? JSON.stringify(value || [], null, 2) : value || "";
+    const displayValue =
+      field.type === "json"
+        ? JSON.stringify(value || [], null, 2)
+        : value || "";
     return `<textarea data-block-field="${field.key}" class="mt-2 h-28 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400" spellcheck="false">${escapeHtml(displayValue)}</textarea>`;
   }
   if (field.type === "select") {
@@ -677,7 +719,9 @@ function updateBlockField(input) {
   const block = getSelectedBlock();
   if (!block) return;
   const key = input.dataset.blockField;
-  const config = (BLOCK_FIELD_CONFIG[block.type] || []).find((field) => field.key === key);
+  const config = (BLOCK_FIELD_CONFIG[block.type] || []).find(
+    (field) => field.key === key,
+  );
   let value = input.value;
   if (config?.type === "number") {
     value = Number(value || 0);
@@ -797,7 +841,9 @@ function updateSchemaField(input) {
 
 function renderPreviewSampleFields() {
   const container = document.getElementById("preview-sample-fields");
-  const schema = currentSchema().filter((field) => field.key !== "unsubscribe_url");
+  const schema = currentSchema().filter(
+    (field) => field.key !== "unsubscribe_url",
+  );
   container.innerHTML = schema
     .map(
       (field) => `
@@ -834,10 +880,13 @@ function collectTemplateDraftPayload() {
 async function saveDraft(options = {}) {
   if (!state.selectedTemplateId) return;
   const payload = collectTemplateDraftPayload();
-  const response = await api(`/api/templates/${state.selectedTemplateId}/draft`, {
-    method: "PUT",
-    body: payload,
-  });
+  const response = await api(
+    `/api/templates/${state.selectedTemplateId}/draft`,
+    {
+      method: "PUT",
+      body: payload,
+    },
+  );
   state.selectedTemplate = response.template;
   state.templateValidationErrors = response.errors || [];
   state.templateEditorMode = state.selectedTemplate.draft_version.editor_mode;
@@ -845,7 +894,9 @@ async function saveDraft(options = {}) {
   await loadTemplates(true);
   if (!options.silent) {
     showToast(
-      state.templateValidationErrors.length ? "Draft Saved With Warnings" : "Draft Saved",
+      state.templateValidationErrors.length
+        ? "Draft Saved With Warnings"
+        : "Draft Saved",
       state.templateValidationErrors.length
         ? state.templateValidationErrors.join(" ")
         : "Draft changes were saved.",
@@ -861,10 +912,16 @@ async function publishCurrentTemplate() {
     showToast("Cannot Publish", state.templateValidationErrors.join(" "), true);
     return;
   }
-  const response = await api(`/api/templates/${state.selectedTemplateId}/publish`, {
-    method: "POST",
-  });
-  showToast("Template Published", response.message || "The template is now live.");
+  const response = await api(
+    `/api/templates/${state.selectedTemplateId}/publish`,
+    {
+      method: "POST",
+    },
+  );
+  showToast(
+    "Template Published",
+    response.message || "The template is now live.",
+  );
   await loadTemplates(true);
   await loadStats();
 }
@@ -872,31 +929,46 @@ async function publishCurrentTemplate() {
 async function previewCurrentTemplate() {
   if (!state.selectedTemplateId) return;
   await saveDraft({ silent: true });
-  const response = await api(`/api/templates/${state.selectedTemplateId}/preview`, {
-    method: "POST",
-    body: { sample_data: state.previewData },
-  });
+  const response = await api(
+    `/api/templates/${state.selectedTemplateId}/preview`,
+    {
+      method: "POST",
+      body: { sample_data: state.previewData },
+    },
+  );
   document.getElementById("preview-frame").srcdoc = response.html || "";
-  document.getElementById("preview-subject").textContent = `Subject: ${response.subject || ""}`;
+  document.getElementById("preview-subject").textContent =
+    `Subject: ${response.subject || ""}`;
 }
 
 async function sendTestEmail() {
   if (!state.selectedTemplateId) return;
   const email = document.getElementById("test-send-email").value.trim();
   if (!email) {
-    showToast("Missing Email", "Enter a recipient email for the test send.", true);
+    showToast(
+      "Missing Email",
+      "Enter a recipient email for the test send.",
+      true,
+    );
     return;
   }
   await saveDraft({ silent: true });
-  const response = await api(`/api/templates/${state.selectedTemplateId}/test-send`, {
-    method: "POST",
-    body: { test_email: email, sample_data: state.previewData },
-  });
-  showToast("Test Email Sent", response.message || "Brevo accepted the test send.");
+  const response = await api(
+    `/api/templates/${state.selectedTemplateId}/test-send`,
+    {
+      method: "POST",
+      body: { test_email: email, sample_data: state.previewData },
+    },
+  );
+  showToast(
+    "Test Email Sent",
+    response.message || "Brevo accepted the test send.",
+  );
 }
 
 async function createTemplateFlow(editorMode) {
-  const defaultName = editorMode === "builder" ? "New Builder Template" : "New Code Template";
+  const defaultName =
+    editorMode === "builder" ? "New Builder Template" : "New Code Template";
   const name = window.prompt("Template name", defaultName);
   if (!name) return;
   const response = await api("/api/templates", {
@@ -914,7 +986,10 @@ async function importHtmlTemplate() {
     showToast("No File Selected", "Choose an HTML file to import.", true);
     return;
   }
-  const name = window.prompt("Template name", input.files[0].name.replace(/\.html$/i, ""));
+  const name = window.prompt(
+    "Template name",
+    input.files[0].name.replace(/\.html$/i, ""),
+  );
   if (!name) return;
   const formData = new FormData();
   formData.append("file", input.files[0]);
@@ -932,9 +1007,12 @@ async function importHtmlTemplate() {
 
 async function duplicateCurrentTemplate() {
   if (!state.selectedTemplateId) return;
-  const response = await api(`/api/templates/${state.selectedTemplateId}/duplicate`, {
-    method: "POST",
-  });
+  const response = await api(
+    `/api/templates/${state.selectedTemplateId}/duplicate`,
+    {
+      method: "POST",
+    },
+  );
   state.selectedTemplateId = response.template.id;
   showToast("Template Duplicated", `${response.template.name} was created.`);
   await loadTemplates(false);
@@ -944,18 +1022,29 @@ async function archiveCurrentTemplate() {
   if (!state.selectedTemplateId) return;
   const template = state.selectedTemplate;
   const archive = !template.is_archived;
-  const response = await api(`/api/templates/${state.selectedTemplateId}/archive`, {
-    method: "POST",
-    body: { is_archived: archive },
-  });
-  showToast(archive ? "Template Archived" : "Template Restored", response.template.name);
+  const response = await api(
+    `/api/templates/${state.selectedTemplateId}/archive`,
+    {
+      method: "POST",
+      body: { is_archived: archive },
+    },
+  );
+  showToast(
+    archive ? "Template Archived" : "Template Restored",
+    response.template.name,
+  );
   await loadTemplates(true);
 }
 
 async function setCurrentTemplateDefault() {
   if (!state.selectedTemplateId) return;
-  await api(`/api/templates/${state.selectedTemplateId}/default`, { method: "POST" });
-  showToast("Default Template Updated", "This template will be preselected for campaigns.");
+  await api(`/api/templates/${state.selectedTemplateId}/default`, {
+    method: "POST",
+  });
+  showToast(
+    "Default Template Updated",
+    "This template will be preselected for campaigns.",
+  );
   await loadSettings();
   await loadTemplates(true);
 }
@@ -1117,7 +1206,9 @@ function renderImportSummary() {
       '<div class="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-slate-500 md:col-span-2">Validation has not been run yet.</div>';
     const warnings = state.importSession.warnings || [];
     errorsPanel.innerHTML = warnings.length
-      ? warnings.map((warning) => `<div class="mb-2">${escapeHtml(warning)}</div>`).join("")
+      ? warnings
+          .map((warning) => `<div class="mb-2">${escapeHtml(warning)}</div>`)
+          .join("")
       : "Validation warnings and row-level errors will appear here.";
     previewGrid.innerHTML = "";
     return;
@@ -1174,7 +1265,9 @@ function renderImportSummary() {
     )
     .join("");
 
-  document.getElementById("download-error-report-btn")?.addEventListener("click", downloadImportErrorReport);
+  document
+    .getElementById("download-error-report-btn")
+    ?.addEventListener("click", downloadImportErrorReport);
 }
 
 function collectImportMappingFromUi() {
@@ -1186,20 +1279,28 @@ function collectImportMappingFromUi() {
   });
   return {
     mapping,
-    selected_sheet: document.getElementById("import-sheet-select").value || null,
+    selected_sheet:
+      document.getElementById("import-sheet-select").value || null,
   };
 }
 
 async function handleImportFile(file) {
-  const templateId = Number(document.getElementById("campaign-template-select").value || 0);
+  const templateId = Number(
+    document.getElementById("campaign-template-select").value || 0,
+  );
   if (!templateId) {
-    showToast("Template Required", "Select a published template before uploading.", true);
+    showToast(
+      "Template Required",
+      "Select a published template before uploading.",
+      true,
+    );
     return;
   }
   const formData = new FormData();
   formData.append("template_id", String(templateId));
   formData.append("file", file);
-  document.getElementById("campaign-upload-status").textContent = `Analyzing ${file.name}...`;
+  document.getElementById("campaign-upload-status").textContent =
+    `Analyzing ${file.name}...`;
   const response = await api("/api/imports/analyze", {
     method: "POST",
     body: formData,
@@ -1207,7 +1308,8 @@ async function handleImportFile(file) {
   state.importSession = response.import_session;
   state.importValidation = null;
   state.stagedBatch = null;
-  document.getElementById("campaign-upload-status").textContent = `${file.name} analyzed.`;
+  document.getElementById("campaign-upload-status").textContent =
+    `${file.name} analyzed.`;
   renderImportMapping();
   renderImportSummary();
 }
@@ -1224,13 +1326,19 @@ async function validateCurrentImport() {
       body: mappingPayload,
     })
   ).import_session;
-  const response = await api(`/api/imports/${state.importSession.id}/validate`, {
-    method: "POST",
-  });
+  const response = await api(
+    `/api/imports/${state.importSession.id}/validate`,
+    {
+      method: "POST",
+    },
+  );
   state.importValidation = response.validation;
   state.importSession = response.validation;
   renderImportSummary();
-  showToast("Validation Complete", "The import file was checked against the selected template.");
+  showToast(
+    "Validation Complete",
+    "The import file was checked against the selected template.",
+  );
 }
 
 async function stageCurrentImport() {
@@ -1263,11 +1371,18 @@ async function launchCurrentBatch() {
 }
 
 async function downloadImportErrorReport() {
-  const response = await fetch(`/api/imports/${state.importSession.id}/error-report`, {
-    headers: authHeaders,
-  });
+  const response = await fetch(
+    `/api/imports/${state.importSession.id}/error-report`,
+    {
+      headers: authHeaders,
+    },
+  );
   if (!response.ok) {
-    showToast("Download Failed", "The error report could not be downloaded.", true);
+    showToast(
+      "Download Failed",
+      "The error report could not be downloaded.",
+      true,
+    );
     return;
   }
   const blob = await response.blob();
@@ -1317,7 +1432,9 @@ async function loadBatches() {
     .join("");
   tbody.querySelectorAll("[data-launch-batch]").forEach((button) => {
     button.addEventListener("click", async () => {
-      await api(`/api/batches/${button.dataset.launchBatch}/launch`, { method: "POST" });
+      await api(`/api/batches/${button.dataset.launchBatch}/launch`, {
+        method: "POST",
+      });
       showToast("Batch Launched", "The staged batch is now queued.");
       await Promise.all([loadBatches(), loadStats(), loadActivity()]);
     });
@@ -1359,13 +1476,18 @@ async function loadActivity() {
     )
     .join("");
   tbody.querySelectorAll("[data-resend-recipient]").forEach((button) => {
-    button.addEventListener("click", () => resendRecipient(button.dataset.resendRecipient));
+    button.addEventListener("click", () =>
+      resendRecipient(button.dataset.resendRecipient),
+    );
   });
 }
 
 async function resendRecipient(recipientId) {
   await api(`/api/recipients/${recipientId}/resend`, { method: "POST" });
-  showToast("Recipient Requeued", "The recipient was queued from the original version snapshot.");
+  showToast(
+    "Recipient Requeued",
+    "The recipient was queued from the original version snapshot.",
+  );
   await Promise.all([loadActivity(), loadStats(), loadBatches()]);
 }
 
@@ -1407,10 +1529,14 @@ async function loadContacts() {
     )
     .join("");
   tbody.querySelectorAll("[data-edit-contact]").forEach((button) => {
-    button.addEventListener("click", () => openContactModal(Number(button.dataset.editContact)));
+    button.addEventListener("click", () =>
+      openContactModal(Number(button.dataset.editContact)),
+    );
   });
   tbody.querySelectorAll("[data-delete-contact]").forEach((button) => {
-    button.addEventListener("click", () => deleteContact(Number(button.dataset.deleteContact)));
+    button.addEventListener("click", () =>
+      deleteContact(Number(button.dataset.deleteContact)),
+    );
   });
 }
 
@@ -1425,7 +1551,9 @@ function openContactModal(contactId) {
     null,
     2,
   );
-  document.getElementById("contact-form-unsubscribed").checked = Boolean(contact.unsubscribed);
+  document.getElementById("contact-form-unsubscribed").checked = Boolean(
+    contact.unsubscribed,
+  );
   document.getElementById("contact-modal").classList.remove("hidden");
   document.getElementById("contact-modal").classList.add("flex");
 }
@@ -1480,7 +1608,8 @@ async function saveSettings(event) {
     sender_name: form.elements.sender_name.value.trim(),
     hourly_limit: Number(form.elements.hourly_limit.value || 20),
     daily_limit: Number(form.elements.daily_limit.value || 300),
-    default_template_id: Number(form.elements.default_template_id.value || 0) || null,
+    default_template_id:
+      Number(form.elements.default_template_id.value || 0) || null,
   };
   await api("/api/settings", { method: "POST", body: payload });
   showToast("Settings Saved", "Sender settings were updated.");
@@ -1498,7 +1627,11 @@ async function bootstrap() {
     await previewCurrentTemplate();
   } catch (error) {
     console.error(error);
-    showToast("Initialization Failed", error.message || "Could not load dashboard.", true);
+    showToast(
+      "Initialization Failed",
+      error.message || "Could not load dashboard.",
+      true,
+    );
   }
 }
 
@@ -1509,22 +1642,32 @@ function attachEvents() {
   });
 
   document.querySelectorAll("[data-view-trigger]").forEach((button) => {
-    button.addEventListener("click", () => switchView(button.dataset.viewTrigger));
+    button.addEventListener("click", () =>
+      switchView(button.dataset.viewTrigger),
+    );
   });
 
-  document.getElementById("settings-form").addEventListener("submit", saveSettings);
-  document.getElementById("campaign-template-select").addEventListener("change", updateCampaignTemplateHint);
+  document
+    .getElementById("settings-form")
+    .addEventListener("submit", saveSettings);
+  document
+    .getElementById("campaign-template-select")
+    .addEventListener("change", updateCampaignTemplateHint);
 
-  document.getElementById("campaign-upload-trigger").addEventListener("click", () => {
-    document.getElementById("campaign-file-input").click();
-  });
-  document.getElementById("campaign-file-input").addEventListener("change", (event) => {
-    if (event.target.files[0]) {
-      handleImportFile(event.target.files[0]).catch((error) => {
-        showToast("Import Analyze Failed", error.message, true);
-      });
-    }
-  });
+  document
+    .getElementById("campaign-upload-trigger")
+    .addEventListener("click", () => {
+      document.getElementById("campaign-file-input").click();
+    });
+  document
+    .getElementById("campaign-file-input")
+    .addEventListener("change", (event) => {
+      if (event.target.files[0]) {
+        handleImportFile(event.target.files[0]).catch((error) => {
+          showToast("Import Analyze Failed", error.message, true);
+        });
+      }
+    });
   const dropzone = document.getElementById("campaign-dropzone");
   dropzone.addEventListener("dragover", (event) => {
     event.preventDefault();
@@ -1542,62 +1685,121 @@ function attachEvents() {
       });
     }
   });
-  document.getElementById("validate-import-btn").addEventListener("click", () => {
-    validateCurrentImport().catch((error) => showToast("Validation Failed", error.message, true));
-  });
+  document
+    .getElementById("validate-import-btn")
+    .addEventListener("click", () => {
+      validateCurrentImport().catch((error) =>
+        showToast("Validation Failed", error.message, true),
+      );
+    });
   document.getElementById("stage-import-btn").addEventListener("click", () => {
-    stageCurrentImport().catch((error) => showToast("Staging Failed", error.message, true));
+    stageCurrentImport().catch((error) =>
+      showToast("Staging Failed", error.message, true),
+    );
   });
   document.getElementById("launch-batch-btn").addEventListener("click", () => {
-    launchCurrentBatch().catch((error) => showToast("Launch Failed", error.message, true));
+    launchCurrentBatch().catch((error) =>
+      showToast("Launch Failed", error.message, true),
+    );
   });
 
-  document.getElementById("refresh-batches-btn").addEventListener("click", () => {
-    loadBatches().catch((error) => showToast("Refresh Failed", error.message, true));
-  });
-  document.getElementById("refresh-activity-btn").addEventListener("click", () => {
-    loadActivity().catch((error) => showToast("Refresh Failed", error.message, true));
-  });
+  document
+    .getElementById("refresh-batches-btn")
+    .addEventListener("click", () => {
+      loadBatches().catch((error) =>
+        showToast("Refresh Failed", error.message, true),
+      );
+    });
+  document
+    .getElementById("refresh-activity-btn")
+    .addEventListener("click", () => {
+      loadActivity().catch((error) =>
+        showToast("Refresh Failed", error.message, true),
+      );
+    });
   document.getElementById("activity-filter").addEventListener("change", () => {
-    loadActivity().catch((error) => showToast("Refresh Failed", error.message, true));
+    loadActivity().catch((error) =>
+      showToast("Refresh Failed", error.message, true),
+    );
   });
 
-  document.getElementById("new-builder-template-btn").addEventListener("click", () => {
-    createTemplateFlow("builder").catch((error) => showToast("Create Failed", error.message, true));
-  });
-  document.getElementById("new-code-template-btn").addEventListener("click", () => {
-    createTemplateFlow("code").catch((error) => showToast("Create Failed", error.message, true));
-  });
-  document.getElementById("import-html-template-btn").addEventListener("click", () => {
-    importHtmlTemplate().catch((error) => showToast("Import Failed", error.message, true));
-  });
-  document.getElementById("refresh-templates-btn").addEventListener("click", () => {
-    loadTemplates(true).catch((error) => showToast("Refresh Failed", error.message, true));
-  });
-  document.getElementById("duplicate-template-btn").addEventListener("click", () => {
-    duplicateCurrentTemplate().catch((error) => showToast("Duplicate Failed", error.message, true));
-  });
-  document.getElementById("rename-template-btn").addEventListener("click", renameCurrentTemplate);
-  document.getElementById("archive-template-btn").addEventListener("click", () => {
-    archiveCurrentTemplate().catch((error) => showToast("Archive Failed", error.message, true));
-  });
-  document.getElementById("set-default-template-btn").addEventListener("click", () => {
-    setCurrentTemplateDefault().catch((error) => showToast("Update Failed", error.message, true));
-  });
-  document.getElementById("delete-template-btn").addEventListener("click", () => {
-    deleteCurrentTemplate().catch((error) => showToast("Delete Failed", error.message, true));
-  });
+  document
+    .getElementById("new-builder-template-btn")
+    .addEventListener("click", () => {
+      createTemplateFlow("builder").catch((error) =>
+        showToast("Create Failed", error.message, true),
+      );
+    });
+  document
+    .getElementById("new-code-template-btn")
+    .addEventListener("click", () => {
+      createTemplateFlow("code").catch((error) =>
+        showToast("Create Failed", error.message, true),
+      );
+    });
+  document
+    .getElementById("import-html-template-btn")
+    .addEventListener("click", () => {
+      importHtmlTemplate().catch((error) =>
+        showToast("Import Failed", error.message, true),
+      );
+    });
+  document
+    .getElementById("refresh-templates-btn")
+    .addEventListener("click", () => {
+      loadTemplates(true).catch((error) =>
+        showToast("Refresh Failed", error.message, true),
+      );
+    });
+  document
+    .getElementById("duplicate-template-btn")
+    .addEventListener("click", () => {
+      duplicateCurrentTemplate().catch((error) =>
+        showToast("Duplicate Failed", error.message, true),
+      );
+    });
+  document
+    .getElementById("rename-template-btn")
+    .addEventListener("click", renameCurrentTemplate);
+  document
+    .getElementById("archive-template-btn")
+    .addEventListener("click", () => {
+      archiveCurrentTemplate().catch((error) =>
+        showToast("Archive Failed", error.message, true),
+      );
+    });
+  document
+    .getElementById("set-default-template-btn")
+    .addEventListener("click", () => {
+      setCurrentTemplateDefault().catch((error) =>
+        showToast("Update Failed", error.message, true),
+      );
+    });
+  document
+    .getElementById("delete-template-btn")
+    .addEventListener("click", () => {
+      deleteCurrentTemplate().catch((error) =>
+        showToast("Delete Failed", error.message, true),
+      );
+    });
   document.getElementById("save-draft-btn").addEventListener("click", () => {
     saveDraft().catch((error) => showToast("Save Failed", error.message, true));
   });
-  document.getElementById("publish-template-btn").addEventListener("click", () => {
-    publishCurrentTemplate().catch((error) => showToast("Publish Failed", error.message, true));
-  });
-  document.getElementById("template-editor-title").addEventListener("dblclick", renameCurrentTemplate);
+  document
+    .getElementById("publish-template-btn")
+    .addEventListener("click", () => {
+      publishCurrentTemplate().catch((error) =>
+        showToast("Publish Failed", error.message, true),
+      );
+    });
+  document
+    .getElementById("template-editor-title")
+    .addEventListener("dblclick", renameCurrentTemplate);
   document.querySelectorAll(".template-tab").forEach((button) => {
     button.addEventListener("click", () => {
       state.activeTemplateTab = button.dataset.templateTab;
-      if (state.activeTemplateTab === "design") state.templateEditorMode = "builder";
+      if (state.activeTemplateTab === "design")
+        state.templateEditorMode = "builder";
       if (state.activeTemplateTab === "code") state.templateEditorMode = "code";
       renderTemplateTabs();
     });
@@ -1605,58 +1807,87 @@ function attachEvents() {
   document.querySelectorAll("[data-add-block]").forEach((button) => {
     button.addEventListener("click", () => addBlock(button.dataset.addBlock));
   });
-  document.getElementById("use-sample-values-btn").addEventListener("click", () => {
-    buildPreviewDataFromSchema(true);
-    renderPreviewSampleFields();
-  });
-  document.getElementById("refresh-preview-btn").addEventListener("click", () => {
-    previewCurrentTemplate().catch((error) => showToast("Preview Failed", error.message, true));
-  });
+  document
+    .getElementById("use-sample-values-btn")
+    .addEventListener("click", () => {
+      buildPreviewDataFromSchema(true);
+      renderPreviewSampleFields();
+    });
+  document
+    .getElementById("refresh-preview-btn")
+    .addEventListener("click", () => {
+      previewCurrentTemplate().catch((error) =>
+        showToast("Preview Failed", error.message, true),
+      );
+    });
   document.querySelectorAll(".preview-width-btn").forEach((button) => {
     button.addEventListener("click", () => {
       state.previewWidth = button.dataset.previewWidth;
-      document.getElementById("preview-frame-shell").style.maxWidth = state.previewWidth;
+      document.getElementById("preview-frame-shell").style.maxWidth =
+        state.previewWidth;
       document.querySelectorAll(".preview-width-btn").forEach((candidate) => {
         const active = candidate.dataset.previewWidth === state.previewWidth;
         candidate.className = active
-          ? "preview-width-btn rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950"
+          ? "preview-width-btn rounded-full border border-sky-300/35 bg-sky-400/15 px-4 py-2 text-sm font-semibold text-sky-100"
           : "preview-width-btn rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-slate-100";
       });
     });
   });
-  document.getElementById("add-schema-field-btn").addEventListener("click", () => {
-    currentSchema().push({
-      key: `custom_field_${currentSchema().filter((field) => !field.builtin).length + 1}`,
-      label: "Custom Field",
-      required: true,
-      default_value: "",
-      sample_value: "",
-      description: "",
-      builtin: false,
+  document
+    .getElementById("add-schema-field-btn")
+    .addEventListener("click", () => {
+      currentSchema().push({
+        key: `custom_field_${currentSchema().filter((field) => !field.builtin).length + 1}`,
+        label: "Custom Field",
+        required: true,
+        default_value: "",
+        sample_value: "",
+        description: "",
+        builtin: false,
+      });
+      renderTemplateEditor();
     });
-    renderTemplateEditor();
-  });
-  document.getElementById("send-test-email-btn").addEventListener("click", () => {
-    sendTestEmail().catch((error) => showToast("Test Send Failed", error.message, true));
-  });
+  document
+    .getElementById("send-test-email-btn")
+    .addEventListener("click", () => {
+      sendTestEmail().catch((error) =>
+        showToast("Test Send Failed", error.message, true),
+      );
+    });
   document.getElementById("asset-upload-btn").addEventListener("click", () => {
-    uploadAsset().catch((error) => showToast("Upload Failed", error.message, true));
+    uploadAsset().catch((error) =>
+      showToast("Upload Failed", error.message, true),
+    );
   });
 
-  document.getElementById("refresh-contacts-btn").addEventListener("click", () => {
-    loadContacts().catch((error) => showToast("Refresh Failed", error.message, true));
-  });
-  document.getElementById("delete-all-contacts-btn").addEventListener("click", () => {
-    deleteAllContacts().catch((error) => showToast("Delete Failed", error.message, true));
-  });
+  document
+    .getElementById("refresh-contacts-btn")
+    .addEventListener("click", () => {
+      loadContacts().catch((error) =>
+        showToast("Refresh Failed", error.message, true),
+      );
+    });
+  document
+    .getElementById("delete-all-contacts-btn")
+    .addEventListener("click", () => {
+      deleteAllContacts().catch((error) =>
+        showToast("Delete Failed", error.message, true),
+      );
+    });
   document.getElementById("contact-search").addEventListener("input", () => {
     clearTimeout(state.contactSearchTimeout);
     state.contactSearchTimeout = setTimeout(() => {
-      loadContacts().catch((error) => showToast("Search Failed", error.message, true));
+      loadContacts().catch((error) =>
+        showToast("Search Failed", error.message, true),
+      );
     }, 250);
   });
-  document.getElementById("close-contact-modal-btn").addEventListener("click", closeContactModal);
-  document.getElementById("contact-form").addEventListener("submit", saveContactFromModal);
+  document
+    .getElementById("close-contact-modal-btn")
+    .addEventListener("click", closeContactModal);
+  document
+    .getElementById("contact-form")
+    .addEventListener("submit", saveContactFromModal);
 }
 
 attachEvents();
