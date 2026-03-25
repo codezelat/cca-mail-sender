@@ -754,7 +754,7 @@
         `;
     container.appendChild(toast);
     requestAnimationFrame(() =>
-      toast.classList.remove("translate-x-full", "opacity-0")
+      toast.classList.remove("translate-x-full", "opacity-0"),
     );
     setTimeout(() => {
       toast.classList.add("translate-x-full", "opacity-0");
@@ -798,11 +798,11 @@
       // Bars
       const pctHour = Math.min(
         (data.emails_sent_this_hour / data.hourly_limit) * 100,
-        100
+        100,
       );
       const pctDay = Math.min(
         (data.emails_sent_today / data.daily_limit) * 100,
-        100
+        100,
       );
       document.getElementById("bar-used-hour").style.width = `${pctHour}%`;
       document.getElementById("bar-used-today").style.width = `${pctDay}%`;
@@ -864,11 +864,15 @@
         let displayDate;
         if (sortBy === "newest") {
           displayDate = new Date(
-            row.created_at.endsWith("Z") ? row.created_at : row.created_at + "Z"
+            row.created_at.endsWith("Z")
+              ? row.created_at
+              : row.created_at + "Z",
           );
         } else {
           displayDate = new Date(
-            row.updated_at.endsWith("Z") ? row.updated_at : row.updated_at + "Z"
+            row.updated_at.endsWith("Z")
+              ? row.updated_at
+              : row.updated_at + "Z",
           );
         }
         const timeStr = displayDate.toLocaleString([], {
@@ -898,9 +902,8 @@
       // Update pagination info
       const start = (data.page - 1) * data.limit + 1;
       const end = Math.min(data.page * data.limit, data.total);
-      document.getElementById(
-        "activity-showing"
-      ).textContent = `Showing ${start}-${end} of ${data.total}`;
+      document.getElementById("activity-showing").textContent =
+        `Showing ${start}-${end} of ${data.total}`;
       document.getElementById("activity-current-page").textContent = data.page;
       document.getElementById("activity-total-pages").textContent = data.pages;
 
@@ -1112,7 +1115,7 @@
 
     try {
       const url = `/api/contacts?page=${currentPage}&limit=${currentLimit}&search=${encodeURIComponent(
-        currentSearch
+        currentSearch,
       )}`;
       const res = await fetch(url, { headers });
       const data = await res.json();
@@ -1135,14 +1138,14 @@
                         }</td>
                         <td class="px-6 py-4 text-gray-400">${c.email}</td>
                         <td class="px-6 py-4 uppercase text-xs font-semibold ${statusColor}">${
-            c.status
-          }</td>
+                          c.status
+                        }</td>
                         <td class="px-6 py-4 text-right gap-2 flex justify-end">
                             <button onclick="openEditModal(${
                               c.id
                             }, '${c.name.replace(/'/g, "\\'")}', '${
-            c.email
-          }')" class="text-blue-400 hover:text-white px-2 py-1 hover:bg-white/10 rounded transition-colors">Edit</button>
+                              c.email
+                            }')" class="text-blue-400 hover:text-white px-2 py-1 hover:bg-white/10 rounded transition-colors">Edit</button>
                             <button onclick="deleteContact(${
                               c.id
                             })" class="text-red-400 hover:text-white px-2 py-1 hover:bg-red-500/10 rounded transition-colors">Delete</button>
@@ -1225,7 +1228,7 @@
   async function deleteAllContacts() {
     if (
       !confirm(
-        "WARNING: This will delete ALL your contacts. This cannot be undone."
+        "WARNING: This will delete ALL your contacts. This cannot be undone.",
       )
     )
       return;

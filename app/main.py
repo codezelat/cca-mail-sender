@@ -7,22 +7,24 @@ from app.services.scheduler_service import SchedulerService
 import logging
 
 # Setup Logger
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 scheduler = SchedulerService()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     logger.info("Initializing Database...")
     create_db_and_tables()
-    
+
     logger.info("Starting Scheduler...")
     scheduler.start()
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Stopping Scheduler...")
     scheduler.stop()

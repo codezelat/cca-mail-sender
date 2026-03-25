@@ -1,12 +1,9 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <title>Sign Up - CCA Campaign Manager</title>
-    <link
-      rel="icon"
-      href="/static/logo.png"
-    />
+    <link rel="icon" href="/static/logo.png" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
@@ -198,7 +195,7 @@
             if (res.ok) {
               showToast(
                 "Success",
-                "Account created successfully! Redirecting..."
+                "Account created successfully! Redirecting...",
               );
               setTimeout(() => (window.location.href = "/login"), 1500);
             } else {
@@ -206,7 +203,7 @@
               showToast(
                 "Signup Failed",
                 err.detail || "Something went wrong",
-                "error"
+                "error",
               );
               btn.disabled = false;
               btn.innerHTML = originalText;

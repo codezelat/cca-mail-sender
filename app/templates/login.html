@@ -1,12 +1,9 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <title>Login - CCA Campaign Manager</title>
-    <link
-      rel="icon"
-      href="/static/logo.png"
-    />
+    <link rel="icon" href="/static/logo.png" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
@@ -203,7 +200,7 @@
               showToast(
                 "Login Failed",
                 err.detail || "Invalid credentials",
-                "error"
+                "error",
               );
               btn.disabled = false;
               btn.innerHTML = originalText;
