@@ -276,10 +276,10 @@ function statusBadge(status) {
   const styles = {
     draft: "bg-slate-400/10 text-slate-200 border-slate-400/20",
     published: "bg-emerald-400/10 text-emerald-200 border-emerald-400/20",
-    archived: "bg-slate-400/10 text-slate-300 border-slate-400/20",
+    archived: "bg-slate-400/10 text-gray-300 border-slate-400/20",
     subscribed: "bg-emerald-400/10 text-emerald-200 border-emerald-400/20",
     queued: "bg-amber-400/10 text-amber-200 border-amber-400/20",
-    processing: "bg-sky-400/10 text-sky-200 border-sky-400/20",
+    processing: "bg-purple-500/10 text-sky-200 border-purple-500/20",
     sent: "bg-emerald-400/10 text-emerald-200 border-emerald-400/20",
     failed: "bg-rose-400/10 text-rose-200 border-rose-400/20",
     staged: "bg-slate-400/10 text-slate-200 border-slate-400/20",
@@ -300,8 +300,8 @@ function switchView(view) {
   document.querySelectorAll(".view-trigger").forEach((button) => {
     const active = button.dataset.viewTrigger === view;
     button.className = active
-      ? "view-trigger rounded-full border border-sky-300/35 bg-sky-400/15 px-4 py-2 text-sm font-semibold text-sky-100 transition"
-      : "view-trigger rounded-full border border-transparent px-4 py-2 text-sm font-medium text-slate-300 transition hover:border-white/20 hover:text-white";
+      ? "view-trigger rounded-full border border-purple-400/35 bg-purple-500/15 px-4 py-2 text-sm font-semibold text-purple-100 transition"
+      : "view-trigger rounded-full border border-transparent px-4 py-2 text-sm font-medium text-gray-300 transition hover:border-white/20 hover:text-white";
   });
 }
 
@@ -310,7 +310,12 @@ function getDraftVersion() {
 }
 
 function currentSchema() {
-  return getDraftVersion()?.merge_fields_schema || [];
+  const draft = getDraftVersion();
+  if (!draft) return [];
+  if (!draft.merge_fields_schema || !Array.isArray(draft.merge_fields_schema)) {
+    draft.merge_fields_schema = [];
+  }
+  return draft.merge_fields_schema;
 }
 
 function currentDesign() {
@@ -422,7 +427,7 @@ function renderTemplateList() {
   const list = document.getElementById("template-list");
   if (!state.templates.length) {
     list.innerHTML =
-      '<div class="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-500">No templates yet.</div>';
+      '<div class="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-gray-500">No templates yet.</div>';
     return;
   }
 
@@ -432,18 +437,18 @@ function renderTemplateList() {
       const published = template.published_version;
       const draft = template.draft_version;
       const badge = template.is_default
-        ? '<span class="rounded-full bg-white px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-950">Default</span>'
+        ? '<span class="rounded-full bg-white px-2 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-black">Default</span>'
         : "";
       return `
         <button data-template-id="${template.id}" class="template-list-item w-full rounded-3xl border ${
           selected
-            ? "border-sky-400/40 bg-sky-400/10"
-            : "border-white/10 bg-slate-950/40"
-        } p-4 text-left transition hover:border-sky-400/30 hover:bg-sky-400/5">
+            ? "border-purple-500/40 bg-purple-500/10"
+            : "border-white/10 bg-white/5"
+        } p-4 text-left transition hover:border-purple-500/30 hover:bg-purple-500/5">
           <div class="flex items-start justify-between gap-3">
             <div>
               <div class="text-sm font-semibold text-white">${escapeHtml(template.name)}</div>
-              <div class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">${escapeHtml(template.editor_mode)}</div>
+              <div class="mt-1 text-xs uppercase tracking-[0.18em] text-gray-500">${escapeHtml(template.editor_mode)}</div>
             </div>
             ${badge}
           </div>
@@ -513,9 +518,9 @@ function renderTemplateWorkspaceEmpty() {
   document.getElementById("template-editor-meta").textContent =
     "Choose a template from the library to open its draft workspace.";
   document.getElementById("builder-block-list").innerHTML =
-    '<div class="rounded-3xl border border-white/10 bg-slate-950/40 p-5 text-sm text-slate-500">No template selected.</div>';
+    '<div class="flex flex-col items-center justify-center pt-24 opacity-50 space-y-3"><svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg><p>No template selected.</p></div>';
   document.getElementById("block-inspector").innerHTML =
-    "Select a block to edit its fields, visibility rules, and content.";
+    '<div class="flex flex-col items-center justify-center pt-24 opacity-50 space-y-3"><p>Select a block to configure its properties</p></div>';
   document.getElementById("schema-fields-list").innerHTML = "";
   document.getElementById("preview-sample-fields").innerHTML = "";
   document.getElementById("asset-list").innerHTML = "";
@@ -575,8 +580,8 @@ function renderTemplateEditor() {
   document.getElementById("template-editor-meta").innerHTML = `
     <div class="flex flex-wrap gap-2">
       <span class="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-200">${escapeHtml(state.templateEditorMode)} mode</span>
-      ${draft ? `<span class="text-slate-400">Draft v${draft.version_number}</span>` : ""}
-      ${published ? `<span class="text-slate-400">Published v${published.version_number}</span>` : '<span class="text-amber-300">Not yet published</span>'}
+      ${draft ? `<span class="text-gray-400">Draft v${draft.version_number}</span>` : ""}
+      ${published ? `<span class="text-gray-400">Published v${published.version_number}</span>` : '<span class="text-amber-300">Not yet published</span>'}
     </div>
   `;
   document.getElementById("template-subject").value = draft?.subject || "";
@@ -606,8 +611,8 @@ function renderTemplateTabs() {
     const active =
       button.dataset.templateTab === (state.activeTemplateTab || "design");
     button.className = active
-      ? "template-tab rounded-full border border-sky-300/35 bg-sky-400/15 px-4 py-2 text-sm font-semibold text-sky-100"
-      : "template-tab rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-medium text-slate-300";
+      ? "template-tab rounded-full border border-purple-400/35 bg-purple-500/15 px-4 py-2 text-sm font-semibold text-purple-100"
+      : "template-tab rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-medium text-gray-300";
   });
 }
 
@@ -616,7 +621,7 @@ function renderBuilderBlocks() {
   const blocks = currentDesign().blocks || [];
   if (!blocks.length) {
     container.innerHTML =
-      '<div class="rounded-3xl border border-dashed border-white/10 bg-slate-950/40 p-6 text-sm text-slate-500">No blocks yet. Add one from the library.</div>';
+      '<div class="flex flex-col items-center justify-center pt-24 opacity-50 space-y-3"><p>No blocks yet. Add one from the canvas header to get started.</p></div>';
     return;
   }
 
@@ -633,21 +638,21 @@ function renderBuilderBlocks() {
       return `
         <div class="rounded-3xl border ${
           selected
-            ? "border-sky-400/40 bg-sky-400/10"
-            : "border-white/10 bg-slate-950/40"
+            ? "border-purple-500/40 bg-purple-500/10"
+            : "border-white/10 bg-white/5"
         } p-4">
           <div class="flex items-start justify-between gap-4">
             <button data-select-block="${block.id}" class="flex-1 text-left">
-              <div class="text-xs uppercase tracking-[0.18em] text-slate-500">${escapeHtml(block.type)}</div>
+              <div class="text-xs uppercase tracking-[0.18em] text-gray-500">${escapeHtml(block.type)}</div>
               <div class="mt-1 text-sm font-semibold text-white">${escapeHtml(String(summary).slice(0, 90))}</div>
             </button>
             <div class="flex items-center gap-2">
-              <button data-move-block="${block.id}:up" class="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-slate-200">↑</button>
-              <button data-move-block="${block.id}:down" class="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-slate-200">↓</button>
-              <button data-delete-block="${block.id}" class="rounded-full border border-rose-400/20 bg-rose-400/10 px-3 py-1 text-xs text-rose-200">Delete</button>
+              <button data-move-block="${block.id}:up" class="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-white hover:bg-white/10 transition">↑</button>
+              <button data-move-block="${block.id}:down" class="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-white hover:bg-white/10 transition">↓</button>
+              <button data-delete-block="${block.id}" class="rounded-full border border-red-500/20 bg-red-500/10 px-3 py-1 text-xs text-red-400 hover:bg-red-500/20 transition">Delete</button>
             </div>
           </div>
-          <div class="mt-3 flex items-center justify-between text-xs text-slate-400">
+          <div class="mt-3 flex items-center justify-between text-xs text-gray-400">
             <span>Position ${index + 1}</span>
             <span>${block.visibility_field ? `Visible when ${block.visibility_field} is ${block.visibility_mode}` : "Always visible"}</span>
           </div>
@@ -685,11 +690,11 @@ function renderFieldInput(field, value) {
       field.type === "json"
         ? JSON.stringify(value || [], null, 2)
         : value || "";
-    return `<textarea data-block-field="${field.key}" class="mt-2 h-28 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400" spellcheck="false">${escapeHtml(displayValue)}</textarea>`;
+    return `<textarea data-block-field="${field.key}" class="mt-2 h-28 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500" spellcheck="false">${escapeHtml(displayValue)}</textarea>`;
   }
   if (field.type === "select") {
     return `
-      <select data-block-field="${field.key}" class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400">
+      <select data-block-field="${field.key}" class="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500">
         ${field.options
           .map(
             (option) =>
@@ -699,7 +704,7 @@ function renderFieldInput(field, value) {
       </select>
     `;
   }
-  return `<input data-block-field="${field.key}" type="${field.type}" value="${escapeHtml(value ?? "")}" class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400" />`;
+  return `<input data-block-field="${field.key}" type="${field.type}" value="${escapeHtml(value ?? "")}" class="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500" />`;
 }
 
 function renderBlockInspector() {
@@ -707,7 +712,7 @@ function renderBlockInspector() {
   const block = getSelectedBlock();
   if (!block) {
     container.innerHTML =
-      "Select a block to edit its fields, visibility rules, and content.";
+      '<div class="flex flex-col items-center justify-center pt-24 opacity-50 space-y-3"><p>Select a block to configure its properties</p></div>';
     return;
   }
 
@@ -716,25 +721,25 @@ function renderBlockInspector() {
   container.innerHTML = `
     <div class="space-y-4">
       <div>
-        <div class="text-xs uppercase tracking-[0.18em] text-slate-500">${escapeHtml(block.type)}</div>
+        <div class="text-xs uppercase tracking-[0.18em] text-gray-500">${escapeHtml(block.type)}</div>
         <div class="mt-1 text-sm font-semibold text-white">Inspector</div>
       </div>
       ${fieldConfig
         .map(
           (field) => `
             <div>
-              <label class="text-sm text-slate-400">${escapeHtml(field.label)}</label>
+              <label class="text-sm text-gray-400">${escapeHtml(field.label)}</label>
               ${renderFieldInput(field, block[field.key])}
             </div>
           `,
         )
         .join("")}
-      <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
-        <div class="text-xs uppercase tracking-[0.18em] text-slate-500">Visibility rule</div>
+      <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <div class="text-xs uppercase tracking-[0.18em] text-gray-500">Visibility rule</div>
         <div class="mt-3 grid gap-3">
           <div>
-            <label class="text-sm text-slate-400">Field</label>
-            <select data-block-field="visibility_field" class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400">
+            <label class="text-sm text-gray-400">Field</label>
+            <select data-block-field="visibility_field" class="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500">
               ${visibilityOptions
                 .map(
                   (option) =>
@@ -744,8 +749,8 @@ function renderBlockInspector() {
             </select>
           </div>
           <div>
-            <label class="text-sm text-slate-400">Mode</label>
-            <select data-block-field="visibility_mode" class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400">
+            <label class="text-sm text-gray-400">Mode</label>
+            <select data-block-field="visibility_mode" class="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500">
               <option value="present" ${block.visibility_mode === "present" ? "selected" : ""}>Show when field is present</option>
               <option value="missing" ${block.visibility_mode === "missing" ? "selected" : ""}>Show when field is missing</option>
             </select>
@@ -819,41 +824,41 @@ function renderSchemaFields() {
     .map((field, index) => {
       const disabled = field.builtin ? "disabled" : "";
       return `
-        <div class="rounded-3xl border border-white/10 bg-black/20 p-4">
+        <div class="rounded-3xl border border-white/10 bg-white/5 p-4">
           <div class="flex items-start justify-between gap-4">
             <div>
-              <div class="text-xs uppercase tracking-[0.18em] text-slate-500">${field.builtin ? "Built-in" : "Custom field"}</div>
+              <div class="text-xs uppercase tracking-[0.18em] text-gray-500">${field.builtin ? "Built-in" : "Custom field"}</div>
               <div class="mt-1 text-sm font-semibold text-white">${escapeHtml(field.label || field.key)}</div>
             </div>
             ${
               field.builtin
-                ? '<span class="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-slate-300">Locked</span>'
-                : `<button data-remove-schema="${index}" class="rounded-full border border-rose-400/20 bg-rose-400/10 px-3 py-1 text-xs text-rose-200">Remove</button>`
+                ? '<span class="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-gray-300">Locked</span>'
+                : `<button data-remove-schema="${index}" class="rounded-full border border-red-500/20 bg-red-500/10 px-3 py-1 text-xs text-red-400 hover:bg-red-500/20 transition">Remove</button>`
             }
           </div>
           <div class="mt-4 grid gap-3 md:grid-cols-2">
             <div>
-              <label class="text-sm text-slate-400">Label</label>
-              <input data-schema-index="${index}" data-schema-key="label" ${disabled} value="${escapeHtml(field.label || "")}" class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400 disabled:opacity-60" />
+              <label class="text-sm text-gray-400">Label</label>
+              <input data-schema-index="${index}" data-schema-key="label" ${disabled} value="${escapeHtml(field.label || "")}" class="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500 disabled:opacity-60" />
             </div>
             <div>
-              <label class="text-sm text-slate-400">Key</label>
-              <input data-schema-index="${index}" data-schema-key="key" ${disabled} value="${escapeHtml(field.key || "")}" class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400 disabled:opacity-60" />
+              <label class="text-sm text-gray-400">Key</label>
+              <input data-schema-index="${index}" data-schema-key="key" ${disabled} value="${escapeHtml(field.key || "")}" class="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500 disabled:opacity-60" />
             </div>
             <div>
-              <label class="text-sm text-slate-400">Default value</label>
-              <input data-schema-index="${index}" data-schema-key="default_value" ${disabled} value="${escapeHtml(field.default_value || "")}" class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400 disabled:opacity-60" />
+              <label class="text-sm text-gray-400">Default value</label>
+              <input data-schema-index="${index}" data-schema-key="default_value" ${disabled} value="${escapeHtml(field.default_value || "")}" class="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500 disabled:opacity-60" />
             </div>
             <div>
-              <label class="text-sm text-slate-400">Sample value</label>
-              <input data-schema-index="${index}" data-schema-key="sample_value" ${disabled} value="${escapeHtml(field.sample_value || "")}" class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400 disabled:opacity-60" />
+              <label class="text-sm text-gray-400">Sample value</label>
+              <input data-schema-index="${index}" data-schema-key="sample_value" ${disabled} value="${escapeHtml(field.sample_value || "")}" class="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500 disabled:opacity-60" />
             </div>
             <div class="md:col-span-2">
-              <label class="text-sm text-slate-400">Description</label>
-              <input data-schema-index="${index}" data-schema-key="description" ${disabled} value="${escapeHtml(field.description || "")}" class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400 disabled:opacity-60" />
+              <label class="text-sm text-gray-400">Description</label>
+              <input data-schema-index="${index}" data-schema-key="description" ${disabled} value="${escapeHtml(field.description || "")}" class="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500 disabled:opacity-60" />
             </div>
-            <label class="flex items-center gap-3 text-sm text-slate-300">
-              <input data-schema-index="${index}" data-schema-key="required" type="checkbox" ${field.required ? "checked" : ""} ${disabled} class="h-4 w-4 rounded border-white/10 bg-black/30" />
+            <label class="flex items-center gap-3 text-sm text-gray-300">
+              <input data-schema-index="${index}" data-schema-key="required" type="checkbox" ${field.required ? "checked" : ""} ${disabled} class="h-4 w-4 rounded border-white/10 bg-black/40" />
               Required during import validation
             </label>
           </div>
@@ -894,8 +899,8 @@ function renderPreviewSampleFields() {
     .map(
       (field) => `
         <div>
-          <label class="text-sm text-slate-400">${escapeHtml(field.label || field.key)}</label>
-          <input data-preview-key="${field.key}" value="${escapeHtml(state.previewData[field.key] || "")}" class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400" />
+          <label class="text-sm text-gray-400">${escapeHtml(field.label || field.key)}</label>
+          <input data-preview-key="${field.key}" value="${escapeHtml(state.previewData[field.key] || "")}" class="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500" />
         </div>
       `,
     )
@@ -1129,19 +1134,19 @@ function renderAssetPanel(enabled, baseUrl) {
   const container = document.getElementById("asset-list");
   if (!state.assets.length) {
     container.innerHTML =
-      '<div class="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-slate-500">No uploaded assets yet.</div>';
+      '<div class="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-gray-500">No uploaded assets yet.</div>';
     return;
   }
   container.innerHTML = state.assets
     .map(
       (asset) => `
-        <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+        <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
           <div class="flex items-center justify-between gap-4">
             <div>
               <div class="text-sm font-medium text-white">${escapeHtml(asset.filename)}</div>
-              <div class="mt-1 text-xs text-slate-500">${Math.round(asset.size / 1024)} KB</div>
+              <div class="mt-1 text-xs text-gray-500">${Math.round(asset.size / 1024)} KB</div>
             </div>
-            <button data-copy-asset="${escapeHtml(asset.url)}" class="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-xs text-slate-100">Copy URL</button>
+            <button data-copy-asset="${escapeHtml(asset.url)}" class="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-xs text-white hover:bg-white/10 transition">Copy URL</button>
           </div>
         </div>
       `,
@@ -1177,7 +1182,7 @@ function renderImportMapping() {
   const importSession = state.importSession;
   if (!importSession) {
     container.innerHTML =
-      '<div class="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-slate-500">Upload a file to configure mappings.</div>';
+      '<div class="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-gray-500">Upload a file to configure mappings.</div>';
     return;
   }
   const fields = importSession.mappable_fields || [];
@@ -1186,15 +1191,15 @@ function renderImportMapping() {
     .map((field) => {
       const selected = (importSession.mapping || {})[field.key] || "";
       return `
-        <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+        <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
           <div class="flex items-center justify-between gap-3">
             <div>
               <div class="text-sm font-semibold text-white">${escapeHtml(field.label || field.key)}</div>
-              <div class="mt-1 text-xs text-slate-500">${field.required ? "Required for validation" : field.description || "Optional field"}</div>
+              <div class="mt-1 text-xs text-gray-500">${field.required ? "Required for validation" : field.description || "Optional field"}</div>
             </div>
-            ${field.required ? '<span class="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-200">Required</span>' : ""}
+            ${field.required ? '<span class="rounded-full border border-yellow-500/20 bg-yellow-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-yellow-500">Required</span>' : ""}
           </div>
-          <select data-import-field="${field.key}" class="mt-3 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400">
+          <select data-import-field="${field.key}" class="mt-3 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500">
             <option value="">${field.required ? "Choose a column" : "Leave unmapped"}</option>
             ${columns
               .map(
@@ -1246,7 +1251,7 @@ function renderImportSummary() {
 
   if (!state.importValidation) {
     summaryPanel.innerHTML =
-      '<div class="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-slate-500 md:col-span-2">Validation has not been run yet.</div>';
+      '<div class="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-gray-500 md:col-span-2">Validation has not been run yet.</div>';
     const warnings = state.importSession.warnings || [];
     errorsPanel.innerHTML = warnings.length
       ? warnings
@@ -1266,8 +1271,8 @@ function renderImportSummary() {
   ]
     .map(
       ([label, value]) => `
-        <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
-          <div class="text-xs uppercase tracking-[0.18em] text-slate-500">${label}</div>
+        <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div class="text-xs uppercase tracking-[0.18em] text-gray-500">${label}</div>
           <div class="mt-2 text-2xl font-semibold text-white">${value}</div>
         </div>
       `,
@@ -1276,7 +1281,7 @@ function renderImportSummary() {
 
   const errorPreview = state.importValidation.row_errors_preview || [];
   const errorReportButton = state.importValidation.error_report_available
-    ? '<button id="download-error-report-btn" class="mt-4 rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-100 transition hover:bg-white/[0.10]">Download Error Report</button>'
+    ? '<button id="download-error-report-btn" class="mt-4 rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-white/[0.10]">Download Error Report</button>'
     : "";
   errorsPanel.innerHTML = errorPreview.length
     ? `
@@ -1284,10 +1289,10 @@ function renderImportSummary() {
         ${errorPreview
           .map(
             (row) => `
-              <div class="rounded-2xl border border-white/10 bg-black/20 p-3">
+              <div class="rounded-2xl border border-white/10 bg-white/5 p-3">
                 <div class="text-sm font-medium text-white">Row ${row.row_number} · ${escapeHtml(row.email || "No email")}</div>
                 <div class="mt-1 text-sm text-rose-200">${escapeHtml(row.error)}</div>
-                ${row.details ? `<div class="mt-1 text-xs text-slate-500">${escapeHtml(row.details)}</div>` : ""}
+                ${row.details ? `<div class="mt-1 text-xs text-gray-500">${escapeHtml(row.details)}</div>` : ""}
               </div>
             `,
           )
@@ -1300,8 +1305,8 @@ function renderImportSummary() {
   previewGrid.innerHTML = (state.importValidation.sample_previews || [])
     .map(
       (preview) => `
-        <div class="rounded-3xl border border-white/10 bg-slate-950/60 p-4">
-          <div class="mb-3 text-xs uppercase tracking-[0.18em] text-slate-500">${escapeHtml(preview.email || "Sample preview")}</div>
+        <div class="rounded-3xl border border-white/10 bg-white/10 p-4">
+          <div class="mb-3 text-xs uppercase tracking-[0.18em] text-gray-500">${escapeHtml(preview.email || "Sample preview")}</div>
           <iframe sandbox="" class="h-[360px] w-full rounded-[20px] border border-white/10 bg-white" srcdoc="${escapeHtml(preview.html || "")}"></iframe>
         </div>
       `,
@@ -1445,7 +1450,7 @@ async function loadBatches() {
   const tbody = document.getElementById("batches-table-body");
   if (!state.batches.length) {
     tbody.innerHTML =
-      '<tr><td colspan="5" class="px-5 py-6 text-center text-slate-500">No campaign batches yet.</td></tr>';
+      '<tr><td colspan="5" class="px-5 py-6 text-center text-gray-500">No campaign batches yet.</td></tr>';
     return;
   }
   tbody.innerHTML = state.batches
@@ -1454,18 +1459,18 @@ async function loadBatches() {
         <tr>
           <td class="px-5 py-4">
             <div class="font-medium text-white">${escapeHtml(batch.name)}</div>
-            <div class="mt-1 text-xs text-slate-500">${escapeHtml(batch.source_filename || "Manual stage")}</div>
+            <div class="mt-1 text-xs text-gray-500">${escapeHtml(batch.source_filename || "Manual stage")}</div>
           </td>
           <td class="px-5 py-4">${statusBadge(batch.status)}</td>
-          <td class="px-5 py-4 text-slate-300">${escapeHtml(batch.template_name || "Template")}</td>
-          <td class="px-5 py-4 text-slate-400">
+          <td class="px-5 py-4 text-gray-300">${escapeHtml(batch.template_name || "Template")}</td>
+          <td class="px-5 py-4 text-gray-400">
             <div>Queued ${batch.queued || 0}</div>
             <div>Sent ${batch.sent || 0} · Failed ${batch.failed || 0}</div>
           </td>
           <td class="px-5 py-4 text-right">
             ${
               batch.status === "staged"
-                ? `<button data-launch-batch="${batch.id}" class="rounded-full bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-950">Launch</button>`
+                ? `<button data-launch-batch="${batch.id}" class="rounded-full bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-black hover:bg-gray-200 transition">Launch</button>`
                 : ""
             }
           </td>
@@ -1492,7 +1497,7 @@ async function loadActivity() {
   const tbody = document.getElementById("activity-table-body");
   if (!state.activity.length) {
     tbody.innerHTML =
-      '<tr><td colspan="6" class="px-5 py-6 text-center text-slate-500">No activity yet.</td></tr>';
+      '<tr><td colspan="6" class="px-5 py-6 text-center text-gray-500">No activity yet.</td></tr>';
     return;
   }
   tbody.innerHTML = state.activity
@@ -1501,16 +1506,16 @@ async function loadActivity() {
         <tr>
           <td class="px-5 py-4">
             <div class="font-medium text-white">${escapeHtml(row.email)}</div>
-            <div class="mt-1 text-xs text-slate-500">${escapeHtml(row.name || "There")}</div>
+            <div class="mt-1 text-xs text-gray-500">${escapeHtml(row.name || "There")}</div>
           </td>
           <td class="px-5 py-4">${statusBadge(row.status)}</td>
-          <td class="px-5 py-4 text-slate-300">${escapeHtml(row.batch_name || "—")}</td>
-          <td class="px-5 py-4 text-slate-400">${escapeHtml(row.template_subject || "—")}</td>
-          <td class="px-5 py-4 text-slate-500">${formatDate(row.updated_at)}</td>
+          <td class="px-5 py-4 text-gray-300">${escapeHtml(row.batch_name || "—")}</td>
+          <td class="px-5 py-4 text-gray-400">${escapeHtml(row.template_subject || "—")}</td>
+          <td class="px-5 py-4 text-gray-500">${formatDate(row.updated_at)}</td>
           <td class="px-5 py-4 text-right">
             ${
               ["sent", "failed"].includes(row.status)
-                ? `<button data-resend-recipient="${row.id}" class="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-100">Resend</button>`
+                ? `<button data-resend-recipient="${row.id}" class="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-white hover:bg-white/10 transition">Resend</button>`
                 : ""
             }
           </td>
@@ -1542,7 +1547,7 @@ async function loadContacts() {
   const tbody = document.getElementById("contacts-table-body");
   if (!state.contacts.length) {
     tbody.innerHTML =
-      '<tr><td colspan="5" class="px-5 py-6 text-center text-slate-500">No contacts found.</td></tr>';
+      '<tr><td colspan="5" class="px-5 py-6 text-center text-gray-500">No contacts found.</td></tr>';
     return;
   }
   tbody.innerHTML = state.contacts
@@ -1551,20 +1556,20 @@ async function loadContacts() {
         <tr>
           <td class="px-5 py-4">
             <div class="font-medium text-white">${escapeHtml(contact.name || "There")}</div>
-            <div class="mt-1 text-xs text-slate-500">${escapeHtml(contact.email)}</div>
+            <div class="mt-1 text-xs text-gray-500">${escapeHtml(contact.email)}</div>
           </td>
           <td class="px-5 py-4">
             ${contact.unsubscribed ? statusBadge("unsubscribed") : statusBadge("subscribed")}
           </td>
-          <td class="px-5 py-4 text-slate-400">${Object.keys(contact.custom_fields_json || {}).length} fields</td>
-          <td class="px-5 py-4 text-slate-400">
+          <td class="px-5 py-4 text-gray-400">${Object.keys(contact.custom_fields_json || {}).length} fields</td>
+          <td class="px-5 py-4 text-gray-400">
             <div>${escapeHtml(contact.last_delivery_status || "—")}</div>
-            <div class="mt-1 text-xs text-slate-500">${escapeHtml(contact.last_delivery_error || "")}</div>
+            <div class="mt-1 text-xs text-gray-500">${escapeHtml(contact.last_delivery_error || "")}</div>
           </td>
           <td class="px-5 py-4 text-right">
             <div class="flex justify-end gap-2">
-              <button data-edit-contact="${contact.id}" class="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-100">Edit</button>
-              <button data-delete-contact="${contact.id}" class="rounded-full border border-rose-400/20 bg-rose-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-rose-200">Delete</button>
+              <button data-edit-contact="${contact.id}" class="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-white hover:bg-white/10 transition">Edit</button>
+              <button data-delete-contact="${contact.id}" class="rounded-full border border-red-500/20 bg-red-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-red-500 hover:bg-red-500/20 transition">Delete</button>
             </div>
           </td>
         </tr>
@@ -1660,6 +1665,10 @@ async function saveSettings(event) {
 }
 
 async function bootstrap() {
+  if ("scrollRestoration" in history) {
+    history.scrollRestoration = "manual";
+  }
+  window.scrollTo(0, 0);
   try {
     await Promise.all([loadSettings(), loadStats()]);
     await loadTemplates(false);
@@ -1714,14 +1723,14 @@ function attachEvents() {
   const dropzone = document.getElementById("campaign-dropzone");
   dropzone.addEventListener("dragover", (event) => {
     event.preventDefault();
-    dropzone.classList.add("border-sky-400/50");
+    dropzone.classList.add("border-purple-500/50");
   });
   dropzone.addEventListener("dragleave", () => {
-    dropzone.classList.remove("border-sky-400/50");
+    dropzone.classList.remove("border-purple-500/50");
   });
   dropzone.addEventListener("drop", (event) => {
     event.preventDefault();
-    dropzone.classList.remove("border-sky-400/50");
+    dropzone.classList.remove("border-purple-500/50");
     if (event.dataTransfer.files[0]) {
       handleImportFile(event.dataTransfer.files[0]).catch((error) => {
         showToast("Import Analyze Failed", error.message, true);
@@ -1871,8 +1880,8 @@ function attachEvents() {
       document.querySelectorAll(".preview-width-btn").forEach((candidate) => {
         const active = candidate.dataset.previewWidth === state.previewWidth;
         candidate.className = active
-          ? "preview-width-btn rounded-full border border-sky-300/35 bg-sky-400/15 px-4 py-2 text-sm font-semibold text-sky-100"
-          : "preview-width-btn rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-slate-100";
+          ? "preview-width-btn rounded-full border border-purple-400/35 bg-purple-500/15 px-4 py-2 text-sm font-semibold text-purple-100"
+          : "preview-width-btn rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-white transition hover:text-white";
       });
     });
   });
