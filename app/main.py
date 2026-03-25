@@ -34,8 +34,8 @@ app.include_router(pages.router)
 app.include_router(api.router)
 app.include_router(auth_routes.router)
 
-# Optional: Mount static if we add custom JS/CSS later
-# app.mount("/static", StaticFiles(directory="static"), name="static")
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 if __name__ == "__main__":
     import uvicorn
