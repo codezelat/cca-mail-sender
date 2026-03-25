@@ -1,1278 +1,604 @@
 {% extends "base.html" %} {% block layout %}
 <style>
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
   .dashboard-shell {
-    --dash-bg: #02050d;
-    --dash-card: rgba(255, 255, 255, 0.035);
-    --dash-card-strong: rgba(255, 255, 255, 0.055);
-    --dash-border: rgba(148, 163, 184, 0.2);
-    --dash-text: #e5e7eb;
-    --dash-muted: #94a3b8;
-    --dash-accent: #60a5fa;
+    background: #000;
+    color: #fff;
     min-height: 100vh;
-    color: var(--dash-text);
-    background:
-      radial-gradient(
-        circle at 12% -15%,
-        rgba(59, 130, 246, 0.18),
-        transparent 42%
-      ),
-      radial-gradient(
-        circle at 85% 10%,
-        rgba(168, 85, 247, 0.1),
-        transparent 36%
-      ),
-      var(--dash-bg);
+    position: relative;
+    overflow-x: hidden;
   }
-
-  .dashboard-shell .view-panel {
-    animation: fade-in 0.28s ease;
-  }
-
-  .dashboard-shell .app-panel {
-    border: 1px solid var(--dash-border);
-    background: linear-gradient(
-      180deg,
-      rgba(15, 23, 42, 0.62) 0%,
-      rgba(2, 6, 23, 0.6) 100%
-    );
-    box-shadow: 0 14px 34px rgba(2, 6, 23, 0.45);
+  .glass-nav {
+    background: rgba(0, 0, 0, 0.7);
     backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
-
-  .dashboard-shell .app-subpanel {
-    border: 1px solid rgba(148, 163, 184, 0.17);
-    background: rgba(2, 6, 23, 0.4);
+  .hero-glow {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(
+      circle,
+      rgba(124, 58, 237, 0.15) 0%,
+      rgba(59, 130, 246, 0.05) 40%,
+      transparent 70%
+    );
+    border-radius: 50%;
+    filter: blur(80px);
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 0;
+    opacity: 0.6;
+    animation: pulse-glow 8s ease-in-out infinite;
+    pointer-events: none;
   }
-
-  .dashboard-shell .metric-label {
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    font-size: 0.68rem;
-    color: #94a3b8;
+  @keyframes pulse-glow {
+    0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.6; }
+    50% { transform: translateX(-50%) scale(1.1); opacity: 0.8; }
   }
-
-  .dashboard-shell input,
-  .dashboard-shell select,
-  .dashboard-shell textarea {
-    border-color: rgba(148, 163, 184, 0.25) !important;
-    background: rgba(2, 6, 23, 0.6) !important;
+  .bento-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
   }
-
-  .dashboard-shell input:focus,
-  .dashboard-shell select:focus,
-  .dashboard-shell textarea:focus {
-    border-color: rgba(96, 165, 250, 0.7) !important;
-    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.12);
+  .bento-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.15);
   }
-
-  .dashboard-shell .view-trigger {
-    border: 1px solid transparent;
+  .view-panel {
+    animation: fade-in 0.3s ease-out;
   }
-
-  .dashboard-shell table tbody td {
-    vertical-align: top;
-  }
-
   @keyframes fade-in {
-    from {
-      opacity: 0;
-      transform: translateY(6px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  /* Forms */
+  input, select, textarea {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+    transition: all 0.2s;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: rgba(168, 85, 247, 0.5) !important;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.2);
+  }
+  /* Tables */
+  table th {
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: 500;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  table td {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+  .metric-label {
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    color: #9ca3af;
   }
 </style>
 
-<div class="dashboard-shell">
-  <nav
-    class="sticky top-0 z-50 border-b border-slate-700/30 bg-slate-950/85 backdrop-blur-xl"
-  >
-    <div
-      class="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 md:px-6"
-    >
+<div class="dashboard-shell selection:bg-purple-500/30">
+  <div class="hero-glow"></div>
+  
+  <nav class="glass-nav sticky top-0 z-50 transition-all duration-300">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
       <div class="flex items-center gap-8">
         <div class="flex items-center gap-3">
-          <img
-            src="/static/logo.png"
-            alt="Logo"
-            class="h-9 w-9 rounded-xl border border-white/10 bg-white/5 p-1 shadow-[0_0_40px_rgba(59,130,246,0.15)]"
-          />
-          <div>
-            <div class="text-sm font-semibold tracking-wide text-slate-100">
-              CCA Campaign Manager
-            </div>
-            <div class="text-xs text-slate-400">Campaign workspace</div>
-          </div>
+          <img src="/static/logo.png" alt="Logo" class="h-8 w-8 rounded-lg shadow-lg shadow-purple-900/20" />
+          <span class="font-semibold text-sm tracking-wide text-gray-200">CCA Campaign Manager</span>
         </div>
-        <div
-          class="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] p-1 md:flex"
-        >
-          <button
-            data-view-trigger="dashboard"
-            class="view-trigger rounded-full px-4 py-2 text-sm font-medium text-slate-300 transition hover:text-white"
-          >
-            Dashboard
-          </button>
-          <button
-            data-view-trigger="templates"
-            class="view-trigger rounded-full px-4 py-2 text-sm font-medium text-slate-300 transition hover:text-white"
-          >
-            Templates
-          </button>
-          <button
-            data-view-trigger="contacts"
-            class="view-trigger rounded-full px-4 py-2 text-sm font-medium text-slate-300 transition hover:text-white"
-          >
-            Contacts
-          </button>
+        <div class="hidden md:flex items-center gap-1 bg-white/5 border border-white/10 rounded-full p-1 backdrop-blur-sm">
+          <button data-view-trigger="dashboard" class="view-trigger rounded-full px-4 py-1.5 text-xs font-medium text-gray-400 hover:text-white transition-colors">Dashboard</button>
+          <button data-view-trigger="templates" class="view-trigger rounded-full px-4 py-1.5 text-xs font-medium text-gray-400 hover:text-white transition-colors">Templates</button>
+          <button data-view-trigger="contacts" class="view-trigger rounded-full px-4 py-1.5 text-xs font-medium text-gray-400 hover:text-white transition-colors">Contacts</button>
         </div>
       </div>
-      <div class="flex items-center gap-3">
-        <div
-          class="hidden items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-300 md:flex"
-        >
-          <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
-          Queue Active
+      <div class="flex items-center gap-4">
+        <div class="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-xs text-green-400">
+          <span class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span> Queue Active
         </div>
-        <button
-          id="sign-out-btn"
-          class="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-medium text-slate-300 transition hover:border-red-400/30 hover:text-red-300"
-        >
-          Sign Out
-        </button>
+        <button id="sign-out-btn" class="text-xs bg-white/5 border border-white/10 text-white px-4 py-2 rounded-full font-medium hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 transition-all">Sign Out</button>
       </div>
     </div>
-
-    <div class="mx-auto max-w-6xl px-4 pb-3 md:hidden">
-      <div
-        class="grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-1"
-      >
-        <button
-          data-view-trigger="dashboard"
-          class="view-trigger rounded-xl px-3 py-2 text-xs font-semibold text-slate-200"
-        >
-          Dashboard
-        </button>
-        <button
-          data-view-trigger="templates"
-          class="view-trigger rounded-xl px-3 py-2 text-xs font-semibold text-slate-200"
-        >
-          Templates
-        </button>
-        <button
-          data-view-trigger="contacts"
-          class="view-trigger rounded-xl px-3 py-2 text-xs font-semibold text-slate-200"
-        >
-          Contacts
-        </button>
+    <!-- Mobile Nav -->
+    <div class="mx-auto px-4 pb-3 md:hidden">
+      <div class="grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white/5 p-1 backdrop-blur-md">
+        <button data-view-trigger="dashboard" class="view-trigger rounded-xl px-2 py-2 text-xs font-semibold text-gray-300">Dashboard</button>
+        <button data-view-trigger="templates" class="view-trigger rounded-xl px-2 py-2 text-xs font-semibold text-gray-300">Templates</button>
+        <button data-view-trigger="contacts" class="view-trigger rounded-xl px-2 py-2 text-xs font-semibold text-gray-300">Contacts</button>
       </div>
     </div>
   </nav>
 
-  <main class="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-10">
-    <section id="view-dashboard" class="view-panel space-y-10">
-      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div class="app-panel rounded-3xl p-5">
+  <main class="relative z-10 mx-auto max-w-7xl px-4 py-8 md:px-6 md:py-10">
+    
+    <!-- DASHBOARD VIEW -->
+    <section id="view-dashboard" class="view-panel space-y-6">
+      <!-- Stats Row -->
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div class="bento-card p-4">
           <div class="metric-label">Contacts</div>
-          <div
-            id="stat-total-contacts"
-            class="mt-4 text-3xl font-semibold text-white"
-          >
-            0
-          </div>
-          <div class="mt-1 text-sm text-slate-400">Total contacts</div>
+          <div id="stat-total-contacts" class="mt-2 text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-white to-gray-400">0</div>
         </div>
-        <div class="app-panel rounded-3xl p-5">
+        <div class="bento-card p-4">
           <div class="metric-label">Templates</div>
-          <div
-            id="stat-templates"
-            class="mt-4 text-3xl font-semibold text-white"
-          >
-            0
-          </div>
-          <div class="mt-1 text-sm text-slate-400">Available templates</div>
+          <div id="stat-templates" class="mt-2 text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-white to-gray-400">0</div>
         </div>
-        <div class="app-panel rounded-3xl p-5">
+        <div class="bento-card p-4">
           <div class="metric-label">Batches</div>
-          <div id="stat-batches" class="mt-4 text-3xl font-semibold text-white">
-            0
-          </div>
-          <div class="mt-1 text-sm text-slate-400">Campaign batches</div>
+          <div id="stat-batches" class="mt-2 text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-white to-gray-400">0</div>
         </div>
-        <div class="app-panel rounded-3xl p-5">
-          <div class="metric-label">Queued</div>
-          <div
-            id="stat-queued"
-            class="mt-4 text-3xl font-semibold text-amber-300"
-          >
-            0
-          </div>
-          <div class="mt-1 text-sm text-slate-400">Ready to send</div>
+        <div class="bento-card p-4 bg-gradient-to-br from-yellow-500/5 to-transparent border-yellow-500/10">
+          <div class="metric-label text-yellow-500/70">Queued</div>
+          <div id="stat-queued" class="mt-2 text-2xl font-bold text-yellow-400">0</div>
         </div>
-        <div class="app-panel rounded-3xl p-5">
-          <div class="metric-label">Sent</div>
-          <div
-            id="stat-sent"
-            class="mt-4 text-3xl font-semibold text-emerald-300"
-          >
-            0
-          </div>
-          <div class="mt-1 text-sm text-slate-400">Delivered emails</div>
+        <div class="bento-card p-4 bg-gradient-to-br from-green-500/5 to-transparent border-green-500/10">
+          <div class="metric-label text-green-500/70">Sent</div>
+          <div id="stat-sent" class="mt-2 text-2xl font-bold text-green-400">0</div>
         </div>
-        <div class="app-panel rounded-3xl p-5">
-          <div class="metric-label">Failed</div>
-          <div
-            id="stat-failed"
-            class="mt-4 text-3xl font-semibold text-rose-300"
-          >
-            0
-          </div>
-          <div class="mt-1 text-sm text-slate-400">Needs attention</div>
+        <div class="bento-card p-4 bg-gradient-to-br from-red-500/5 to-transparent border-red-500/10">
+          <div class="metric-label text-red-500/70">Failed</div>
+          <div id="stat-failed" class="mt-2 text-2xl font-bold text-red-400">0</div>
         </div>
       </div>
 
-      <div class="grid gap-8 xl:grid-cols-[1.2fr_0.8fr]">
+      <!-- Main Dual Grid -->
+      <div class="grid lg:grid-cols-[1fr_400px] gap-6">
+        
+        <!-- Left Col: Launch Campaign + Batches -->
         <div class="space-y-6">
-          <div class="app-panel rounded-[28px] p-6 md:p-7">
-            <div
-              class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between"
-            >
-              <div>
-                <h2 class="mt-2 text-2xl font-semibold text-white">
-                  Build and launch a campaign
-                </h2>
+          
+          <!-- Launch Campaign -->
+          <div class="bento-card p-6 md:p-8 relative overflow-hidden group">
+            <div class="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl -mr-20 -mt-20 group-hover:bg-purple-500/20 transition-colors pointer-events-none"></div>
+            
+            <h2 class="text-xl font-semibold mb-6 flex items-center gap-3 relative z-10">
+              <div class="h-8 w-8 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
               </div>
-              <div
-                class="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-200"
-              >
-                Validation active
-              </div>
-            </div>
-
-            <div class="mt-6 grid gap-5 lg:grid-cols-2">
-              <div class="space-y-5">
-                <div class="app-subpanel rounded-2xl p-5">
-                  <label
-                    class="text-xs uppercase tracking-[0.22em] text-slate-500"
-                  >
-                    Step 1 · Template
-                  </label>
-                  <select
-                    id="campaign-template-select"
-                    class="mt-3 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
-                  ></select>
-                  <p
-                    id="campaign-template-hint"
-                    class="mt-3 text-sm text-slate-400"
-                  >
-                    Select a published template.
-                  </p>
+              Launch Campaign
+            </h2>
+            
+            <div class="grid md:grid-cols-2 gap-6 relative z-10">
+              <!-- Template & File -->
+              <div class="space-y-4">
+                <div>
+                  <label class="text-xs uppercase tracking-wider text-gray-500 mb-2 block">1. Select Template</label>
+                  <select id="campaign-template-select" class="w-full rounded-xl px-4 py-2.5 text-sm"></select>
+                  <p id="campaign-template-hint" class="mt-1 text-xs text-gray-500">Pick a published template.</p>
                 </div>
-
-                <div class="app-subpanel rounded-2xl p-5">
-                  <div class="flex items-center justify-between gap-4">
-                    <div>
-                      <label
-                        class="text-xs uppercase tracking-[0.22em] text-slate-500"
-                      >
-                        Step 2 · Upload File
-                      </label>
-                    </div>
-                    <button
-                      id="campaign-upload-trigger"
-                      class="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-slate-200"
-                    >
-                      Choose File
-                    </button>
+                
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <label class="text-xs uppercase tracking-wider text-gray-500 block">2. Upload Audience</label>
+                    <button id="campaign-upload-trigger" class="text-xs text-purple-400 hover:text-purple-300 transition-colors">Browse File</button>
                   </div>
-                  <div
-                    id="campaign-dropzone"
-                    class="mt-4 rounded-3xl border border-dashed border-white/10 bg-gradient-to-br from-slate-950/70 to-slate-900/50 p-8 text-center transition hover:border-sky-400/50"
-                  >
-                    <div
-                      class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03]"
-                    >
-                      <svg
-                        class="h-6 w-6 text-slate-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="1.8"
-                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M12 11v8m0 0l-3-3m3 3l3-3"
-                        ></path>
-                      </svg>
-                    </div>
-                    <div class="mt-4 text-base font-medium text-white">
-                      Drop CSV, XLSX, or XLS here
-                    </div>
-                    <div class="mt-1 text-sm text-slate-500">
-                      CSV, XLSX, XLS
-                    </div>
-                    <div
-                      id="campaign-upload-status"
-                      class="mt-4 text-sm text-sky-300"
-                    ></div>
+                  <div id="campaign-dropzone" class="rounded-xl border border-dashed border-white/20 bg-white/5 p-4 text-center hover:border-purple-500/50 transition-colors cursor-pointer group/drop">
+                    <div class="text-sm font-medium text-gray-300 group-hover/drop:text-white transition-colors">Drop CSV/Excel here</div>
+                    <div id="campaign-upload-status" class="mt-1 text-xs text-purple-300"></div>
                   </div>
-                  <input
-                    id="campaign-file-input"
-                    type="file"
-                    class="hidden"
-                    accept=".csv,.xlsx,.xls"
-                  />
+                  <input id="campaign-file-input" type="file" class="hidden" accept=".csv,.xlsx,.xls" />
                 </div>
               </div>
-
-              <div class="space-y-5">
-                <div class="app-subpanel rounded-2xl p-5">
-                  <div class="flex items-center justify-between">
-                    <label
-                      class="text-xs uppercase tracking-[0.22em] text-slate-500"
-                    >
-                      Step 3 · Mapping
-                    </label>
-                    <button
-                      id="validate-import-btn"
-                      class="rounded-full border border-sky-400/40 bg-sky-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-sky-200 transition hover:bg-sky-400/20"
-                    >
-                      Validate
-                    </button>
+              
+              <!-- Mapping & Launch -->
+              <div class="space-y-4">
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <label class="text-xs uppercase tracking-wider text-gray-500 block">3. Mapping Data</label>
+                    <button id="validate-import-btn" class="text-[10px] uppercase bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition-colors hidden">Validate</button>
                   </div>
-                  <div class="mt-4 grid gap-4">
-                    <div>
-                      <label class="text-sm text-slate-400"
-                        >Workbook sheet</label
-                      >
-                      <select
-                        id="import-sheet-select"
-                        class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
-                      ></select>
-                    </div>
-                    <div id="mapping-grid" class="space-y-3"></div>
-                  </div>
+                  <select id="import-sheet-select" class="w-full rounded-xl px-4 py-2.5 text-sm mb-3 hidden"></select>
+                  <div id="mapping-grid" class="space-y-2 max-h-32 overflow-y-auto pr-1"></div>
                 </div>
-
-                <div class="app-subpanel rounded-2xl p-5">
-                  <div class="flex items-center justify-between">
-                    <label
-                      class="text-xs uppercase tracking-[0.22em] text-slate-500"
-                    >
-                      Step 4 · Review + Launch
-                    </label>
-                    <div class="flex items-center gap-2">
-                      <button
-                        id="stage-import-btn"
-                        class="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-200 transition hover:bg-white/[0.10]"
-                      >
-                        Stage Batch
-                      </button>
-                      <button
-                        id="launch-batch-btn"
-                        class="rounded-full bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-950 transition hover:bg-slate-200"
-                      >
-                        Launch
-                      </button>
-                    </div>
+                
+                <div class="pt-2 border-t border-white/10 hidden" id="launch-actions-container">
+                  <div id="import-errors-panel" class="text-xs text-red-400 mb-3 bg-red-900/20 p-2 rounded-lg hidden"></div>
+                  <div id="import-summary-panel" class="grid grid-cols-2 gap-2 text-xs text-gray-400 mb-4"></div>
+                  <div class="flex gap-2">
+                    <button id="stage-import-btn" class="flex-1 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/20 transition-all">Stage Only</button>
+                    <button id="launch-batch-btn" class="flex-1 rounded-xl bg-white text-black px-4 py-2.5 text-sm font-semibold hover:bg-gray-200 transition-all shadow-[0_0_15px_rgba(255,255,255,0.2)]">Launch Now</button>
                   </div>
-                  <div
-                    id="import-summary-panel"
-                    class="mt-4 grid gap-3 md:grid-cols-2"
-                  ></div>
-                  <div
-                    id="import-errors-panel"
-                    class="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-slate-400"
-                  >
-                    Validation summary appears here.
-                  </div>
-                  <div
-                    id="sample-preview-grid"
-                    class="mt-4 grid gap-4 lg:grid-cols-2"
-                  ></div>
                 </div>
               </div>
             </div>
+            
+            <div id="sample-preview-grid" class="mt-4 grid gap-3 lg:grid-cols-2 relative z-10"></div>
           </div>
 
-          <div class="app-panel rounded-[28px] p-6 md:p-7">
-            <div
-              class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"
-            >
-              <div>
-                <div
-                  class="text-xs uppercase tracking-[0.28em] text-emerald-300/80"
-                >
-                  Batches
-                </div>
-                <h3 class="mt-2 text-xl font-semibold text-white">
-                  Recent batches
-                </h3>
-              </div>
-              <button
-                id="refresh-batches-btn"
-                class="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/[0.10]"
-              >
-                Refresh
-              </button>
+          <!-- Batches -->
+          <div class="bento-card p-6 w-full overflow-hidden">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold text-white">Recent Batches</h3>
+              <button id="refresh-batches-btn" class="text-xs bg-white/5 border border-white/10 px-3 py-1.5 rounded-full hover:bg-white/10 transition">Refresh</button>
             </div>
-            <div
-              class="mt-5 overflow-hidden rounded-3xl border border-white/10"
-            >
-              <div class="overflow-x-auto">
-                <table class="min-w-full text-left text-sm">
-                  <thead
-                    class="bg-slate-950/80 text-xs uppercase tracking-[0.18em] text-slate-500"
-                  >
-                    <tr>
-                      <th class="px-5 py-4">Batch</th>
-                      <th class="px-5 py-4">Status</th>
-                      <th class="px-5 py-4">Template</th>
-                      <th class="px-5 py-4">Counts</th>
-                      <th class="px-5 py-4 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody
-                    id="batches-table-body"
-                    class="divide-y divide-white/10 bg-black/10"
-                  >
-                    <tr>
-                      <td
-                        colspan="5"
-                        class="px-5 py-6 text-center text-slate-500"
-                      >
-                        Loading batches...
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm whitespace-nowrap">
+                <thead class="text-xs uppercase tracking-wider text-gray-500">
+                  <tr>
+                    <th class="px-4 py-3">Batch</th>
+                    <th class="px-4 py-3">Status</th>
+                    <th class="px-4 py-3">Template</th>
+                    <th class="px-4 py-3">Counts</th>
+                    <th class="px-4 py-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="batches-table-body" class="text-gray-300">
+                  <tr><td colspan="5" class="px-4 py-6 text-center text-gray-500">Loading batches...</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
-
-          <div class="app-panel rounded-[28px] p-6 md:p-7">
-            <div
-              class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-            >
-              <div>
-                <div
-                  class="text-xs uppercase tracking-[0.28em] text-amber-300/80"
-                >
-                  Activity
-                </div>
-                <h3 class="mt-2 text-xl font-semibold text-white">
-                  Live activity
-                </h3>
-              </div>
-              <div class="flex items-center gap-3">
-                <select
-                  id="activity-filter"
-                  class="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-white outline-none"
-                >
-                  <option value="">All statuses</option>
-                  <option value="queued">Queued</option>
-                  <option value="processing">Processing</option>
-                  <option value="sent">Sent</option>
-                  <option value="failed">Failed</option>
-                  <option value="unsubscribed">Unsubscribed</option>
-                </select>
-                <button
-                  id="refresh-activity-btn"
-                  class="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/[0.10]"
-                >
-                  Refresh
-                </button>
-              </div>
-            </div>
-            <div
-              class="mt-5 overflow-hidden rounded-3xl border border-white/10"
-            >
-              <div class="overflow-x-auto">
-                <table class="min-w-full text-left text-sm">
-                  <thead
-                    class="bg-slate-950/80 text-xs uppercase tracking-[0.18em] text-slate-500"
-                  >
-                    <tr>
-                      <th class="px-5 py-4">Recipient</th>
-                      <th class="px-5 py-4">Status</th>
-                      <th class="px-5 py-4">Batch</th>
-                      <th class="px-5 py-4">Template</th>
-                      <th class="px-5 py-4">Updated</th>
-                      <th class="px-5 py-4 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody
-                    id="activity-table-body"
-                    class="divide-y divide-white/10 bg-black/10"
-                  >
-                    <tr>
-                      <td
-                        colspan="6"
-                        class="px-5 py-6 text-center text-slate-500"
-                      >
-                        Loading activity...
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+          
         </div>
 
-        <div class="space-y-6">
-          <div class="app-panel rounded-[28px] p-6 md:p-7">
-            <div
-              class="text-xs uppercase tracking-[0.28em] text-fuchsia-300/80"
-            >
-              Configuration
+        <!-- Right Col: Activity + Settings -->
+        <div class="space-y-6 flex flex-col">
+          
+          <!-- Activity -->
+          <div class="bento-card p-6 flex flex-col flex-1 min-h-[400px]">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold text-white">Live Activity</h3>
+              <select id="activity-filter" class="w-32 rounded-lg px-2 py-1 text-xs border-transparent bg-white/5">
+                <option value="">All statuses</option>
+                <option value="queued">Queued</option>
+                <option value="processing">Processing</option>
+                <option value="sent">Sent</option>
+                <option value="failed">Failed</option>
+                <option value="unsubscribed">Unsubscribed</option>
+              </select>
+              <button id="refresh-activity-btn" class="hidden">Refresh</button>
             </div>
-            <h3 class="mt-2 text-xl font-semibold text-white">
-              Sender and defaults
-            </h3>
-            <form id="settings-form" class="mt-6 space-y-4">
+            <div class="flex-1 overflow-auto pr-2">
+              <table class="w-full text-left text-xs">
+                <tbody id="activity-table-body" class="text-gray-400 divide-y divide-white/5">
+                  <tr><td class="py-4 text-center">Loading activity...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Configuration -->
+          <div class="bento-card p-6 relative overflow-hidden group">
+            <div class="absolute bottom-0 right-0 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl -mr-10 -mb-10 group-hover:bg-blue-500/20 transition-colors pointer-events-none"></div>
+            <h3 class="text-lg font-semibold text-white mb-4 relative z-10">Settings</h3>
+            <form id="settings-form" class="space-y-3 relative z-10">
               <div>
-                <label class="text-sm text-slate-400">Brevo API Key</label>
-                <input
-                  type="password"
-                  name="brevo_api_key"
-                  class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
-                />
+                <label class="text-xs text-gray-500 mb-1 block">Brevo API Key</label>
+                <input type="password" name="brevo_api_key" class="w-full rounded-lg px-3 py-2 text-sm" />
               </div>
-              <div class="grid gap-4 md:grid-cols-2">
+              <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="text-sm text-slate-400">Sender Email</label>
-                  <input
-                    type="email"
-                    name="sender_email"
-                    class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
-                  />
+                  <label class="text-xs text-gray-500 mb-1 block">Sender Email</label>
+                  <input type="email" name="sender_email" class="w-full rounded-lg px-3 py-2 text-sm" />
                 </div>
                 <div>
-                  <label class="text-sm text-slate-400">Sender Name</label>
-                  <input
-                    type="text"
-                    name="sender_name"
-                    class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
-                  />
-                </div>
-              </div>
-              <div class="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label class="text-sm text-slate-400">Hourly Limit</label>
-                  <input
-                    type="number"
-                    min="1"
-                    name="hourly_limit"
-                    class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
-                  />
+                  <label class="text-xs text-gray-500 mb-1 block">Sender Name</label>
+                  <input type="text" name="sender_name" class="w-full rounded-lg px-3 py-2 text-sm" />
                 </div>
                 <div>
-                  <label class="text-sm text-slate-400">Daily Limit</label>
-                  <input
-                    type="number"
-                    min="1"
-                    name="daily_limit"
-                    class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
-                  />
+                  <label class="text-xs text-gray-500 mb-1 block">Hourly Limit</label>
+                  <input type="number" name="hourly_limit" class="w-full rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500 mb-1 block">Daily Limit</label>
+                  <input type="number" name="daily_limit" class="w-full rounded-lg px-3 py-2 text-sm" />
                 </div>
               </div>
               <div>
-                <label class="text-sm text-slate-400">Default Template</label>
-                <select
-                  id="settings-default-template"
-                  name="default_template_id"
-                  class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
-                ></select>
+                <label class="text-xs text-gray-500 mb-1 block">Default Template</label>
+                <select id="settings-default-template" name="default_template_id" class="w-full rounded-lg px-3 py-2 text-sm"></select>
               </div>
-              <div class="app-subpanel rounded-2xl p-4">
-                <div class="flex items-center justify-between gap-4">
-                  <div>
-                    <div class="text-sm font-medium text-white">
-                      Usage Today
-                    </div>
-                    <div class="mt-1 text-sm text-slate-400">
-                      <span id="usage-hour">0</span>/<span id="limit-hour"
-                        >0</span
-                      >
-                      this hour ·
-                      <span id="usage-day">0</span>/<span id="limit-day"
-                        >0</span
-                      >
-                      today
-                    </div>
-                  </div>
-                  <button
-                    type="submit"
-                    class="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-slate-200"
-                  >
-                    Save
-                  </button>
+              <div class="flex items-center justify-between pt-3 mt-3 border-t border-white/10">
+                <div class="text-xs text-gray-400">
+                  <span id="usage-hour" class="text-white font-medium">0</span>/<span id="limit-hour">0</span> hr &bull; 
+                  <span id="usage-day" class="text-white font-medium">0</span>/<span id="limit-day">0</span> day
                 </div>
+                <button type="submit" class="bg-white text-black px-4 py-1.5 rounded-full text-xs font-semibold hover:bg-gray-200 transition-colors">Save</button>
               </div>
             </form>
           </div>
+          
         </div>
       </div>
     </section>
 
-    <section id="view-templates" class="view-panel hidden space-y-8">
-      <div class="grid gap-8 xl:grid-cols-[320px_minmax(0,1fr)]">
+    <!-- TEMPLATES VIEW -->
+    <section id="view-templates" class="view-panel hidden">
+      <div class="grid lg:grid-cols-[280px_1fr] gap-6">
+        
+        <!-- Sidebar Library -->
         <aside class="space-y-6">
-          <div class="app-panel rounded-[28px] p-5">
-            <div class="flex items-center justify-between">
-              <div>
-                <div
-                  class="text-xs uppercase tracking-[0.28em] text-sky-300/80"
-                >
-                  Workspace
-                </div>
-                <h2 class="mt-2 text-xl font-semibold text-white">Templates</h2>
-              </div>
-              <button
-                id="refresh-templates-btn"
-                class="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300 transition hover:bg-white/[0.1]"
-              >
-                Refresh
-              </button>
+          <div class="bento-card p-5 relative overflow-hidden group">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-colors pointer-events-none"></div>
+            <div class="flex items-center justify-between mb-4 relative z-10">
+              <h2 class="text-lg font-semibold">Templates</h2>
+              <button id="refresh-templates-btn" class="text-xs text-gray-400 hover:text-white"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg></button>
             </div>
-            <div class="mt-5 space-y-3">
-              <button
-                id="new-builder-template-btn"
-                class="w-full rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-200"
-              >
-                New Builder Template
-              </button>
-              <button
-                id="new-code-template-btn"
-                class="w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.10]"
-              >
-                New Code Template
-              </button>
-              <div class="app-subpanel rounded-2xl p-4">
-                <label class="text-sm text-slate-400">Import HTML file</label>
-                <input
-                  id="import-html-template-input"
-                  type="file"
-                  class="mt-3 block w-full text-sm text-slate-300"
-                  accept=".html"
-                />
-                <button
-                  id="import-html-template-btn"
-                  class="mt-3 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.10]"
-                >
-                  Import HTML as Code Template
-                </button>
-              </div>
+            <div class="space-y-2 mb-6 relative z-10">
+              <button id="new-builder-template-btn" class="w-full rounded-xl bg-white text-black px-4 py-2 text-sm font-semibold hover:bg-gray-200 transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)]">New Builder Template</button>
+              <button id="new-code-template-btn" class="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium hover:bg-white/10 transition-colors">New Code Template</button>
             </div>
-          </div>
-
-          <div class="app-panel rounded-[28px] p-4">
-            <div
-              class="mb-3 text-xs uppercase tracking-[0.28em] text-slate-500"
-            >
-              Library
+            
+            <div class="text-xs uppercase tracking-wider text-gray-500 mb-3 relative z-10">Your Library</div>
+            <div id="template-list" class="space-y-1 max-h-[400px] overflow-y-auto pr-2 relative z-10"></div>
+            
+            <div class="mt-6 pt-4 border-t border-white/10 relative z-10">
+              <label class="text-xs text-gray-400 block mb-2">Import HTML</label>
+              <input id="import-html-template-input" type="file" class="w-full text-xs text-gray-400 mb-2" accept=".html" />
+              <button id="import-html-template-btn" class="w-full rounded-lg border border-white/10 bg-white/5 py-1.5 text-xs text-white hover:bg-white/10 transition-colors">Import as Code</button>
             </div>
-            <div id="template-list" class="space-y-2"></div>
           </div>
         </aside>
-
-        <div class="space-y-6">
-          <div class="app-panel rounded-[28px] p-6 md:p-7">
-            <div
-              class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between"
-            >
-              <div>
-                <div
-                  class="text-xs uppercase tracking-[0.28em] text-emerald-300/80"
-                >
-                  Editor
-                </div>
-                <h2
-                  id="template-editor-title"
-                  class="mt-2 text-2xl font-semibold text-white"
-                >
-                  Select a template
-                </h2>
-                <div
-                  id="template-editor-meta"
-                  class="mt-2 text-sm text-slate-400"
-                >
-                  Pick a template from your library.
-                </div>
-              </div>
-              <div class="flex flex-wrap items-center gap-3">
-                <button
-                  id="rename-template-btn"
-                  class="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-slate-100 transition hover:bg-white/[0.10]"
-                >
-                  Rename
-                </button>
-                <button
-                  id="duplicate-template-btn"
-                  class="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-slate-100 transition hover:bg-white/[0.10]"
-                >
-                  Duplicate
-                </button>
-                <button
-                  id="archive-template-btn"
-                  class="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-slate-100 transition hover:bg-white/[0.10]"
-                >
-                  Archive
-                </button>
-                <button
-                  id="set-default-template-btn"
-                  class="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-slate-100 transition hover:bg-white/[0.10]"
-                >
-                  Set Default
-                </button>
-                <button
-                  id="delete-template-btn"
-                  class="rounded-full border border-rose-400/20 bg-rose-400/10 px-4 py-2 text-sm font-medium text-rose-200 transition hover:bg-rose-400/20"
-                >
-                  Delete
-                </button>
-                <button
-                  id="save-draft-btn"
-                  class="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.10]"
-                >
-                  Save Draft
-                </button>
-                <button
-                  id="publish-template-btn"
-                  class="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-slate-200"
-                >
-                  Publish
-                </button>
-              </div>
+          
+        <!-- Editor Area -->
+        <div class="bento-card p-0 flex flex-col h-[800px] overflow-hidden">
+          <!-- Editor Header -->
+          <div class="p-6 border-b border-white/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/[0.01]">
+            <div>
+              <h2 id="template-editor-title" class="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">Select a template</h2>
+              <div id="template-editor-meta" class="text-xs text-gray-500 mt-1">Pick or create a template to begin editing.</div>
             </div>
-
-            <div class="mt-6 flex flex-wrap items-center gap-3">
-              <button
-                data-template-tab="design"
-                class="template-tab rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-white"
-              >
-                Design
-              </button>
-              <button
-                data-template-tab="code"
-                class="template-tab rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-medium text-slate-300"
-              >
-                Code
-              </button>
-              <button
-                data-template-tab="preview"
-                class="template-tab rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-medium text-slate-300"
-              >
-                Preview
-              </button>
-              <button
-                data-template-tab="settings"
-                class="template-tab rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-medium text-slate-300"
-              >
-                Settings
-              </button>
-              <div
-                id="template-validation-banner"
-                class="ml-auto text-sm text-slate-400"
-              ></div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button id="rename-template-btn" class="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-xs hover:bg-white/10 transition">Rename</button>
+              <button id="duplicate-template-btn" class="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-xs hover:bg-white/10 transition">Duplicate</button>
+              <button id="archive-template-btn" class="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-xs hover:bg-white/10 transition">Archive</button>
+              <button id="set-default-template-btn" class="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-xs hover:bg-white/10 transition">Set Default</button>
+              <button id="delete-template-btn" class="px-3 py-1.5 rounded-lg border border-red-500/20 bg-red-500/10 text-xs text-red-400 hover:bg-red-500/20 transition">Delete</button>
+              <div class="w-px h-6 bg-white/10 mx-1"></div>
+              <button id="save-draft-btn" class="px-4 py-1.5 rounded-full border border-white/10 bg-white/5 text-sm font-medium hover:bg-white/10 transition">Save Draft</button>
+              <button id="publish-template-btn" class="px-4 py-1.5 rounded-full bg-white text-black text-sm font-semibold hover:bg-gray-200 transition shadow-[0_0_15px_rgba(255,255,255,0.1)]">Publish</button>
             </div>
           </div>
-
-          <div
-            id="template-tab-design"
-            class="template-tab-panel app-panel rounded-[28px] p-6 md:p-7"
-          >
-            <div class="grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)_360px]">
+          
+          <!-- Editor Tabs -->
+          <div class="px-6 py-3 border-b border-white/5 flex items-center gap-2 bg-black/20">
+            <button data-template-tab="design" class="template-tab px-4 py-1.5 rounded-full bg-white/10 text-sm font-medium text-white transition">Design</button>
+            <button data-template-tab="code" class="template-tab px-4 py-1.5 rounded-full text-sm font-medium text-gray-400 hover:text-white transition">Code</button>
+            <button data-template-tab="preview" class="template-tab px-4 py-1.5 rounded-full text-sm font-medium text-gray-400 hover:text-white transition">Preview</button>
+            <button data-template-tab="settings" class="template-tab px-4 py-1.5 rounded-full text-sm font-medium text-gray-400 hover:text-white transition">Settings</button>
+            <div id="template-validation-banner" class="ml-auto text-xs text-gray-500"></div>
+          </div>
+          
+          <!-- Editor Content Areas -->
+          <div class="flex-1 overflow-y-auto relative p-6 bg-gradient-to-b from-transparent to-black/30">
+            
+            <!-- Design Tab -->
+            <div id="template-tab-design" class="template-tab-panel grid xl:grid-cols-[200px_1fr_260px] gap-6 h-full">
               <div class="space-y-4">
-                <div>
-                  <div
-                    class="text-xs uppercase tracking-[0.24em] text-slate-500"
-                  >
-                    Block Library
-                  </div>
-                  <div class="mt-4 grid gap-2">
-                    <button
-                      data-add-block="section"
-                      class="block-add-btn rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-left text-sm text-white transition hover:bg-white/[0.10]"
-                    >
-                      Section
-                    </button>
-                    <button
-                      data-add-block="columns"
-                      class="block-add-btn rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-left text-sm text-white transition hover:bg-white/[0.10]"
-                    >
-                      Columns
-                    </button>
-                    <button
-                      data-add-block="text"
-                      class="block-add-btn rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-left text-sm text-white transition hover:bg-white/[0.10]"
-                    >
-                      Text
-                    </button>
-                    <button
-                      data-add-block="image"
-                      class="block-add-btn rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-left text-sm text-white transition hover:bg-white/[0.10]"
-                    >
-                      Image
-                    </button>
-                    <button
-                      data-add-block="button"
-                      class="block-add-btn rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-left text-sm text-white transition hover:bg-white/[0.10]"
-                    >
-                      Button
-                    </button>
-                    <button
-                      data-add-block="spacer"
-                      class="block-add-btn rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-left text-sm text-white transition hover:bg-white/[0.10]"
-                    >
-                      Spacer
-                    </button>
-                    <button
-                      data-add-block="divider"
-                      class="block-add-btn rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-left text-sm text-white transition hover:bg-white/[0.10]"
-                    >
-                      Divider
-                    </button>
-                    <button
-                      data-add-block="social_footer"
-                      class="block-add-btn rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-left text-sm text-white transition hover:bg-white/[0.10]"
-                    >
-                      Social Footer
-                    </button>
-                    <button
-                      data-add-block="raw_html"
-                      class="block-add-btn rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-left text-sm text-white transition hover:bg-white/[0.10]"
-                    >
-                      Raw HTML
-                    </button>
-                  </div>
+                <div class="text-xs uppercase tracking-wider text-gray-500">Blocks</div>
+                <div class="grid gap-2">
+                  <button data-add-block="section" class="block-add-btn text-left px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-xs text-white">Section</button>
+                  <button data-add-block="columns" class="block-add-btn text-left px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-xs text-white">Columns</button>
+                  <button data-add-block="text" class="block-add-btn text-left px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-xs text-white">Text</button>
+                  <button data-add-block="image" class="block-add-btn text-left px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-xs text-white">Image</button>
+                  <button data-add-block="button" class="block-add-btn text-left px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-xs text-white">Button</button>
+                  <button data-add-block="spacer" class="block-add-btn text-left px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-xs text-white">Spacer</button>
+                  <button data-add-block="divider" class="block-add-btn text-left px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-xs text-white">Divider</button>
+                  <button data-add-block="social_footer" class="block-add-btn text-left px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-xs text-white">Social Footer</button>
+                  <button data-add-block="raw_html" class="block-add-btn text-left px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-xs text-white">Raw HTML</button>
                 </div>
               </div>
               <div class="space-y-4">
-                <div class="flex items-center justify-between">
+                <div class="text-xs uppercase tracking-wider text-gray-500">Canvas</div>
+                <div id="builder-block-list" class="space-y-2 border border-white/5 bg-black/20 rounded-xl p-4 min-h-[400px]"></div>
+              </div>
+              <div class="space-y-4">
+                <div class="text-xs uppercase tracking-wider text-gray-500">Inspector</div>
+                <div id="block-inspector" class="bg-black/40 border border-white/5 rounded-xl p-4 text-xs text-gray-400 min-h-[400px]">
+                  Select a block to configure.
+                </div>
+              </div>
+            </div>
+
+            <!-- Code Tab -->
+            <div id="template-tab-code" class="template-tab-panel hidden h-full flex flex-col">
+              <textarea id="template-html-source" class="flex-1 w-full rounded-xl border border-white/10 bg-black/50 p-4 font-mono text-sm text-gray-300 resize-none" spellcheck="false"></textarea>
+            </div>
+
+            <!-- Preview Tab -->
+            <div id="template-tab-preview" class="template-tab-panel hidden h-full grid lg:grid-cols-[280px_1fr] gap-6">
+              <div class="space-y-6">
+                <div>
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="text-xs uppercase tracking-wider text-gray-500">Sample Data</div>
+                    <button id="use-sample-values-btn" class="text-[10px] uppercase bg-white/10 px-2 py-1 rounded text-white hover:bg-white/20 transition">Use Auto</button>
+                  </div>
+                  <div id="preview-sample-fields" class="space-y-2 mb-4"></div>
+                  <button id="refresh-preview-btn" class="w-full rounded-lg bg-white/10 text-white py-2 text-xs font-medium hover:bg-white/20 transition">Update Preview</button>
+                </div>
+                <div>
+                  <div class="text-xs uppercase tracking-wider text-gray-500 mb-3">Modes</div>
+                  <div class="flex flex-wrap gap-2">
+                    <button data-preview-width="100%" class="preview-width-btn text-xs bg-white text-black px-3 py-1.5 rounded-full font-medium">Full Width</button>
+                    <button data-preview-width="680px" class="preview-width-btn text-xs border border-white/20 bg-transparent px-3 py-1.5 rounded-full text-gray-300">Desktop</button>
+                    <button data-preview-width="360px" class="preview-width-btn text-xs border border-white/20 bg-transparent px-3 py-1.5 rounded-full text-gray-300">Mobile</button>
+                  </div>
+                </div>
+                <div id="preview-subject" class="text-xs text-gray-400 p-3 bg-white/5 rounded-lg border border-white/5">No subject set.</div>
+              </div>
+              <div class="bg-white rounded-xl overflow-hidden relative border border-white/10 shadow-2xl h-full mx-auto transition-all duration-300 w-full" id="preview-frame-shell">
+                <iframe id="preview-frame" sandbox class="w-full h-full border-0 bg-white"></iframe>
+              </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div id="template-tab-settings" class="template-tab-panel hidden grid md:grid-cols-2 gap-8 h-full content-start">
+              <div class="space-y-6">
+                <div class="space-y-4 bg-white/5 border border-white/5 p-5 rounded-xl">
                   <div>
-                    <div
-                      class="text-xs uppercase tracking-[0.24em] text-slate-500"
-                    >
-                      Canvas Outline
-                    </div>
-                    <div class="mt-1 text-sm text-slate-400">
-                      Reorder, select, and edit blocks.
-                    </div>
+                    <label class="text-xs text-gray-500 mb-1 block">Subject</label>
+                    <input id="template-subject" type="text" class="w-full rounded-lg px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                    <label class="text-xs text-gray-500 mb-1 block">Preheader</label>
+                    <input id="template-preheader" type="text" class="w-full rounded-lg px-3 py-2 text-sm" />
                   </div>
                 </div>
-                <div id="builder-block-list" class="space-y-3"></div>
-              </div>
-              <div class="space-y-4">
-                <div>
-                  <div
-                    class="text-xs uppercase tracking-[0.24em] text-slate-500"
-                  >
-                    Inspector
+                
+                <div class="bg-white/5 border border-white/5 p-5 rounded-xl">
+                  <div class="flex items-center justify-between mb-4">
+                    <div class="text-xs uppercase tracking-wider text-gray-500">Merge Fields</div>
+                    <button id="add-schema-field-btn" class="text-[10px] text-white uppercase bg-white/10 px-2 py-1 rounded hover:bg-white/20 transition">Add Field</button>
                   </div>
-                  <div class="mt-1 text-sm text-slate-400">
-                    Controls for the selected block.
-                  </div>
-                </div>
-                <div
-                  id="block-inspector"
-                  class="app-subpanel rounded-3xl p-5 text-sm text-slate-400"
-                >
-                  Select a block to edit fields and visibility.
+                  <div id="schema-fields-list" class="space-y-2 max-h-[200px] overflow-auto pr-2"></div>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <div
-            id="template-tab-code"
-            class="template-tab-panel hidden app-panel rounded-[28px] p-6 md:p-7"
-          >
-            <div class="grid gap-6 xl:grid-cols-[1fr_320px]">
-              <div>
-                <div class="text-xs uppercase tracking-[0.24em] text-slate-500">
-                  Code Mode
-                </div>
-                <textarea
-                  id="template-html-source"
-                  class="mt-4 h-[560px] w-full rounded-[28px] border border-white/10 bg-slate-950/70 px-5 py-4 font-mono text-sm text-slate-100 outline-none transition focus:border-sky-400"
-                  spellcheck="false"
-                ></textarea>
-              </div>
-              <div class="space-y-4">
-                <div class="app-subpanel rounded-3xl p-5">
-                  <div class="text-sm font-medium text-white">
-                    Code-mode notes
-                  </div>
-                  <ul class="mt-3 space-y-3 text-sm text-slate-400">
-                    <li>
-                      Imported HTML remains in code mode unless rebuilt
-                      visually.
-                    </li>
-                    <li>
-                      Use &#123;&#123; field_name &#125;&#125; placeholders for
-                      custom fields.
-                    </li>
-                    <li>
-                      &#123;&#123; unsubscribe_url &#125;&#125; is always
-                      available.
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div
-            id="template-tab-preview"
-            class="template-tab-panel hidden app-panel rounded-[28px] p-6 md:p-7"
-          >
-            <div class="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
-              <div class="space-y-4">
-                <div class="app-subpanel rounded-3xl p-5">
-                  <div class="flex items-center justify-between">
-                    <div>
-                      <div
-                        class="text-xs uppercase tracking-[0.24em] text-slate-500"
-                      >
-                        Sample Data
-                      </div>
-                      <div class="mt-1 text-sm text-slate-400">
-                        Test rendering with sample tokens.
-                      </div>
-                    </div>
-                    <button
-                      id="use-sample-values-btn"
-                      class="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-100 transition hover:bg-white/[0.10]"
-                    >
-                      Use Samples
-                    </button>
-                  </div>
-                  <div id="preview-sample-fields" class="mt-4 space-y-3"></div>
-                  <button
-                    id="refresh-preview-btn"
-                    class="mt-4 w-full rounded-full bg-white px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-200"
-                  >
-                    Refresh Preview
-                  </button>
-                </div>
-
-                <div class="app-subpanel rounded-3xl p-5">
-                  <div
-                    class="text-xs uppercase tracking-[0.24em] text-slate-500"
-                  >
-                    Preview Modes
-                  </div>
-                  <div class="mt-4 flex flex-wrap gap-2">
-                    <button
-                      data-preview-width="100%"
-                      class="preview-width-btn rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950"
-                    >
-                      Full
-                    </button>
-                    <button
-                      data-preview-width="680px"
-                      class="preview-width-btn rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-slate-100"
-                    >
-                      Desktop
-                    </button>
-                    <button
-                      data-preview-width="420px"
-                      class="preview-width-btn rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-slate-100"
-                    >
-                      Email Width
-                    </button>
-                    <button
-                      data-preview-width="360px"
-                      class="preview-width-btn rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-slate-100"
-                    >
-                      Mobile
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div class="space-y-4">
-                <div class="app-subpanel rounded-3xl p-5">
-                  <div
-                    class="text-xs uppercase tracking-[0.24em] text-slate-500"
-                  >
-                    Rendered Preview
-                  </div>
-                  <div
-                    id="preview-subject"
-                    class="mt-2 text-sm text-slate-300"
-                  ></div>
-                </div>
-                <div
-                  class="overflow-hidden rounded-[28px] border border-white/10 bg-slate-950/80 p-4"
-                >
-                  <div
-                    class="mx-auto transition-all"
-                    id="preview-frame-shell"
-                    style="max-width: 100%"
-                  >
-                    <iframe
-                      id="preview-frame"
-                      sandbox=""
-                      class="h-[700px] w-full rounded-[24px] border border-white/10 bg-white"
-                    ></iframe>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div
-            id="template-tab-settings"
-            class="template-tab-panel hidden app-panel rounded-[28px] p-6 md:p-7"
-          >
-            <div class="grid gap-6 xl:grid-cols-[1fr_360px]">
+              
               <div class="space-y-6">
-                <div class="app-subpanel rounded-3xl p-5">
-                  <div class="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <label class="text-sm text-slate-400">Subject</label>
-                      <input
-                        id="template-subject"
-                        type="text"
-                        class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
-                      />
-                    </div>
-                    <div>
-                      <label class="text-sm text-slate-400">Preheader</label>
-                      <input
-                        id="template-preheader"
-                        type="text"
-                        class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
-                      />
-                    </div>
-                  </div>
+                <div class="bg-white/5 border border-white/5 p-5 rounded-xl">
+                  <div class="text-xs uppercase tracking-wider text-gray-500 mb-2">Test Send</div>
+                  <div class="text-xs text-gray-400 mb-4">Fire a real test email with current draft layout.</div>
+                  <input id="test-send-email" type="email" placeholder="you@domain.com" class="w-full rounded-lg px-3 py-2 text-sm mb-3" />
+                  <button id="send-test-email-btn" class="w-full rounded-lg bg-white text-black py-2 text-sm font-semibold hover:bg-gray-200 transition">Send Test</button>
                 </div>
-
-                <div class="app-subpanel rounded-3xl p-5">
-                  <div class="flex items-center justify-between">
-                    <div>
-                      <div
-                        class="text-xs uppercase tracking-[0.24em] text-slate-500"
-                      >
-                        Merge Fields
-                      </div>
-                      <div class="mt-1 text-sm text-slate-400">
-                        Custom fields are validated against import data.
-                      </div>
-                    </div>
-                    <button
-                      id="add-schema-field-btn"
-                      class="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-100 transition hover:bg-white/[0.10]"
-                    >
-                      Add Field
-                    </button>
-                  </div>
-                  <div id="schema-fields-list" class="mt-4 space-y-3"></div>
-                </div>
-              </div>
-
-              <div class="space-y-6">
-                <div class="app-subpanel rounded-3xl p-5">
-                  <div
-                    class="text-xs uppercase tracking-[0.24em] text-slate-500"
-                  >
-                    Test Send
-                  </div>
-                  <div class="mt-1 text-sm text-slate-400">
-                    Sends current draft without publishing.
-                  </div>
-                  <input
-                    id="test-send-email"
-                    type="email"
-                    placeholder="recipient@example.com"
-                    class="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
-                  />
-                  <button
-                    id="send-test-email-btn"
-                    class="mt-4 w-full rounded-full bg-white px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-200"
-                  >
-                    Send Test Email
-                  </button>
-                </div>
-
-                <div class="app-subpanel rounded-3xl p-5">
-                  <div class="flex items-center justify-between">
-                    <div>
-                      <div
-                        class="text-xs uppercase tracking-[0.24em] text-slate-500"
-                      >
-                        Assets
-                      </div>
-                      <div
-                        id="asset-support-message"
-                        class="mt-1 text-sm text-slate-400"
-                      >
-                        External image URLs are always supported.
-                      </div>
-                    </div>
-                  </div>
-                  <div class="mt-4">
-                    <input
-                      id="asset-upload-input"
-                      type="file"
-                      accept=".png,.jpg,.jpeg,.gif,.webp"
-                      class="block w-full text-sm text-slate-300"
-                    />
-                    <button
-                      id="asset-upload-btn"
-                      class="mt-3 w-full rounded-full border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.10]"
-                    >
-                      Upload Asset
-                    </button>
-                  </div>
-                  <div id="asset-list" class="mt-4 space-y-3"></div>
+                
+                <div class="bg-white/5 border border-white/5 p-5 rounded-xl">
+                  <div class="text-xs uppercase tracking-wider text-gray-500 mb-4">Assets Gallery</div>
+                  <input id="asset-upload-input" type="file" accept=".png,.jpg,.jpeg,.gif,.webp" class="text-xs w-full mb-3 text-gray-400" />
+                  <button id="asset-upload-btn" class="w-full rounded-lg border border-white/10 bg-white/5 text-white py-2 text-sm font-medium hover:bg-white/10 transition mb-4">Upload New Asset</button>
+                  <div id="asset-list" class="space-y-2 max-h-[150px] overflow-auto pr-2"></div>
+                  <div id="asset-support-message" class="mt-3 text-[10px] text-gray-500">External URLs are supported gracefully.</div>
                 </div>
               </div>
             </div>
+            
           </div>
         </div>
       </div>
     </section>
 
-    <section id="view-contacts" class="view-panel hidden space-y-8">
-      <div class="app-panel rounded-[28px] p-6 md:p-7">
-        <div
-          class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-        >
+    <!-- CONTACTS VIEW -->
+    <section id="view-contacts" class="view-panel hidden">
+      <div class="bento-card p-6 md:p-8">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 relative z-10">
           <div>
-            <div class="text-xs uppercase tracking-[0.28em] text-slate-500">
-              Address Book
-            </div>
-            <h2 class="mt-2 text-2xl font-semibold text-white">
-              Contacts and delivery status
-            </h2>
+            <h2 class="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">Address Book</h2>
           </div>
-          <div class="flex flex-wrap items-center gap-3">
-            <input
-              id="contact-search"
-              type="text"
-              placeholder="Search by name or email"
-              class="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-white outline-none transition focus:border-sky-400"
-            />
-            <button
-              id="refresh-contacts-btn"
-              class="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/[0.10]"
-            >
-              Refresh
-            </button>
-            <button
-              id="delete-all-contacts-btn"
-              class="rounded-full border border-rose-400/20 bg-rose-400/10 px-4 py-2 text-sm font-medium text-rose-200 transition hover:bg-rose-400/20"
-            >
-              Delete All
-            </button>
+          <div class="flex items-center gap-3">
+            <input id="contact-search" type="text" placeholder="Search contacts..." class="w-64 rounded-full px-4 py-2 text-sm bg-black/40" />
+            <button id="refresh-contacts-btn" class="text-xs text-white rounded-full border border-white/10 bg-white/5 px-4 py-2 hover:bg-white/10 transition">Refresh</button>
+            <button id="delete-all-contacts-btn" class="text-xs rounded-full border border-red-500/20 bg-red-500/10 text-red-400 px-4 py-2 hover:bg-red-500/20 transition">Wipe All</button>
           </div>
         </div>
-
-        <div class="mt-5 overflow-hidden rounded-3xl border border-white/10">
-          <div class="overflow-x-auto">
-            <table class="min-w-full text-left text-sm">
-              <thead
-                class="bg-slate-950/80 text-xs uppercase tracking-[0.18em] text-slate-500"
-              >
-                <tr>
-                  <th class="px-5 py-4">Contact</th>
-                  <th class="px-5 py-4">Subscription</th>
-                  <th class="px-5 py-4">Custom Fields</th>
-                  <th class="px-5 py-4">Last Delivery</th>
-                  <th class="px-5 py-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody
-                id="contacts-table-body"
-                class="divide-y divide-white/10 bg-black/10"
-              >
-                <tr>
-                  <td colspan="5" class="px-5 py-6 text-center text-slate-500">
-                    Loading contacts...
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+        
+        <div class="overflow-x-auto rounded-xl border border-white/5 bg-black/20 relative z-10">
+          <table class="w-full text-left text-sm whitespace-nowrap">
+            <thead class="text-xs uppercase tracking-wider text-gray-500 bg-white/5">
+              <tr>
+                <th class="px-5 py-3">Contact</th>
+                <th class="px-5 py-3">Status</th>
+                <th class="px-5 py-3">Data</th>
+                <th class="px-5 py-3">Last Active</th>
+                <th class="px-5 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="contacts-table-body" class="text-gray-300 divide-y divide-white/5">
+              <tr><td colspan="5" class="px-5 py-8 text-center text-gray-500">Loading contacts...</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </section>
+
   </main>
 </div>
 
-<div
-  id="contact-modal"
-  class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/80 p-6 backdrop-blur-xl"
->
-  <div
-    class="w-full max-w-xl rounded-[32px] border border-white/10 bg-slate-950 p-6 shadow-2xl"
-  >
-    <div class="flex items-start justify-between gap-4">
-      <div>
-        <div class="text-xs uppercase tracking-[0.28em] text-slate-500">
-          Contact Editor
-        </div>
-        <h3 class="mt-2 text-2xl font-semibold text-white">Edit contact</h3>
-      </div>
-      <button
-        id="close-contact-modal-btn"
-        class="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-sm text-slate-300 transition hover:bg-white/[0.10]"
-      >
-        Close
-      </button>
+<!-- Modal -->
+<div id="contact-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
+  <div class="w-full max-w-md rounded-2xl border border-white/10 bg-[#0a0a0a] p-6 shadow-2xl transform scale-95 transition-transform duration-300">
+    <div class="flex justify-between items-center mb-6">
+      <h3 class="text-lg font-semibold text-white">Edit Contact</h3>
+      <button id="close-contact-modal-btn" class="text-gray-500 hover:text-white transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
     </div>
-    <form id="contact-form" class="mt-6 space-y-4">
+    <form id="contact-form" class="space-y-4">
       <input type="hidden" id="contact-form-id" />
-      <div class="grid gap-4 md:grid-cols-2">
-        <div>
-          <label class="text-sm text-slate-400">Name</label>
-          <input
-            id="contact-form-name"
-            type="text"
-            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
-          />
-        </div>
-        <div>
-          <label class="text-sm text-slate-400">Email</label>
-          <input
-            id="contact-form-email"
-            type="email"
-            class="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400"
-          />
-        </div>
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Name</label>
+        <input id="contact-form-name" type="text" class="w-full rounded-lg px-3 py-2 text-sm" />
       </div>
       <div>
-        <label class="text-sm text-slate-400">Custom fields (JSON)</label>
-        <textarea
-          id="contact-form-custom-fields"
-          class="mt-2 h-44 w-full rounded-3xl border border-white/10 bg-black/30 px-4 py-3 font-mono text-sm text-white outline-none transition focus:border-sky-400"
-          spellcheck="false"
-        ></textarea>
+        <label class="text-xs text-gray-500 mb-1 block">Email</label>
+        <input id="contact-form-email" type="email" class="w-full rounded-lg px-3 py-2 text-sm" />
       </div>
-      <label class="flex items-center gap-3 text-sm text-slate-300">
-        <input
-          id="contact-form-unsubscribed"
-          type="checkbox"
-          class="h-4 w-4 rounded border-white/10 bg-black/30"
-        />
-        Mark as unsubscribed
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Custom Fields (JSON)</label>
+        <textarea id="contact-form-custom-fields" class="w-full h-32 rounded-lg px-3 py-2 font-mono text-xs resize-none" spellcheck="false"></textarea>
+      </div>
+      <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer pt-2">
+        <input id="contact-form-unsubscribed" type="checkbox" class="rounded border-white/10 bg-black/50 accent-purple-500 h-4 w-4" />
+        Unsubscribed status
       </label>
-      <button
-        type="submit"
-        class="w-full rounded-full bg-white px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-200"
-      >
-        Save Contact
-      </button>
+      <button type="submit" class="w-full rounded-full bg-white text-black py-2 text-sm font-semibold hover:bg-gray-200 transition mt-4">Save Changes</button>
     </form>
   </div>
 </div>
 
-<script defer src="/static/dashboard-app.js?v=3"></script>
+<script>
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((m) => {
+      if (m.target.id === 'contact-modal' || m.target.id === 'custom-confirm-modal' || m.target.id === 'custom-prompt-modal') {
+        if (!m.target.classList.contains('hidden')) {
+          setTimeout(() => { m.target.classList.remove('opacity-0'); m.target.children[0].classList.remove('scale-95'); }, 10);
+        } else {
+          m.target.classList.add('opacity-0'); m.target.children[0].classList.add('scale-95');
+        }
+      }
+    });
+  });
+  ['contact-modal', 'custom-confirm-modal', 'custom-prompt-modal'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) observer.observe(el, { attributes: true, attributeFilter: ['class'] });
+  });
+</script>
+
+<!-- Confirm Modal -->
+<div id="custom-confirm-modal" class="fixed inset-0 z-[60] hidden flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
+  <div class="w-full max-w-sm rounded-2xl border border-white/10 bg-[#0a0a0a] p-6 shadow-2xl transform scale-95 transition-transform duration-300 text-center">
+    <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 mb-4">
+      <svg class="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+    </div>
+    <h3 class="text-lg font-semibold text-white mb-2" id="confirm-title">Are you sure?</h3>
+    <p class="text-sm text-gray-400 mb-6" id="confirm-message"></p>
+    <div class="flex gap-3 w-full">
+      <button id="confirm-cancel-btn" class="flex-1 rounded-xl bg-white/5 border border-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10 transition">Cancel</button>
+      <button id="confirm-ok-btn" class="flex-1 rounded-xl bg-red-500/80 hover:bg-red-500 text-white px-4 py-2 text-sm font-semibold transition shadow-[0_0_15px_rgba(239,68,68,0.2)]">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Prompt Modal -->
+<div id="custom-prompt-modal" class="fixed inset-0 z-[60] hidden flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
+  <div class="w-full max-w-sm rounded-2xl border border-white/10 bg-[#0a0a0a] p-6 shadow-2xl transform scale-95 transition-transform duration-300">
+    <h3 class="text-lg font-semibold text-white mb-2" id="prompt-title">Input required</h3>
+    <p class="text-sm text-gray-400 mb-4" id="prompt-message"></p>
+    <input type="text" id="prompt-input" class="w-full rounded-lg px-3 py-2 text-sm bg-white/5 border border-white/10 text-white focus:border-purple-500 focus:outline-none mb-6" />
+    <div class="flex gap-3 w-full">
+      <button id="prompt-cancel-btn" class="flex-1 rounded-xl bg-white/5 border border-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10 transition">Cancel</button>
+      <button id="prompt-ok-btn" class="flex-1 rounded-xl bg-white text-black px-4 py-2 text-sm font-semibold hover:bg-gray-200 transition shadow-[0_0_15px_rgba(255,255,255,0.2)]">Submit</button>
+    </div>
+  </div>
+</div>
+
+<script defer src="/static/dashboard-app.js?v=6"></script>
 {% endblock %}

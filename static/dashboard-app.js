@@ -4,6 +4,52 @@ if (!token) {
 }
 
 const authHeaders = { Authorization: `Bearer ${token}` };
+window.awaitConfirm = function(title, message) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById("custom-confirm-modal");
+    document.getElementById("confirm-title").innerText = title || "Are you sure?";
+    document.getElementById("confirm-message").innerText = message;
+    modal.classList.remove("hidden");
+    
+    const cleanup = () => {
+      modal.classList.add("hidden");
+      document.getElementById("confirm-ok-btn").onclick = null;
+      document.getElementById("confirm-cancel-btn").onclick = null;
+    };
+    
+    document.getElementById("confirm-ok-btn").onclick = () => { cleanup(); resolve(true); };
+    document.getElementById("confirm-cancel-btn").onclick = () => { cleanup(); resolve(false); };
+  });
+};
+
+window.awaitPrompt = function(title, message, defaultVal = "") {
+  return new Promise((resolve) => {
+    const modal = document.getElementById("custom-prompt-modal");
+    document.getElementById("prompt-title").innerText = title;
+    document.getElementById("prompt-message").innerText = message || "";
+    const input = document.getElementById("prompt-input");
+    input.value = defaultVal;
+    modal.classList.remove("hidden");
+    input.focus();
+    
+    const cleanup = () => {
+      modal.classList.add("hidden");
+      document.getElementById("prompt-ok-btn").onclick = null;
+      document.getElementById("prompt-cancel-btn").onclick = null;
+      input.onkeydown = null;
+    };
+    
+    const submit = () => { cleanup(); resolve(input.value); };
+    
+    document.getElementById("prompt-ok-btn").onclick = submit;
+    document.getElementById("prompt-cancel-btn").onclick = () => { cleanup(); resolve(null); };
+    input.onkeydown = (e) => {
+      if (e.key === "Enter") { e.preventDefault(); submit(); }
+      if (e.key === "Escape") { e.preventDefault(); cleanup(); resolve(null); }
+    };
+  });
+};
+
 const state = {
   activeView: "dashboard",
   settings: {},
@@ -441,8 +487,8 @@ async function loadTemplates(preserveSelection = true) {
   const data = await api("/api/templates");
   state.templates = data.templates || [];
   if (!preserveSelection || !state.selectedTemplateId) {
-    state.selectedTemplateId =
-      state.settings.default_template_id || state.templates[0]?.id || null;
+    const validDefaultId = state.templates.some(t => t.id === state.settings.default_template_id) ? state.settings.default_template_id : null;
+    state.selectedTemplateId = validDefaultId || state.templates[0]?.id || null;
   } else if (
     !state.templates.some(
       (template) => template.id === state.selectedTemplateId,
@@ -969,7 +1015,7 @@ async function sendTestEmail() {
 async function createTemplateFlow(editorMode) {
   const defaultName =
     editorMode === "builder" ? "New Builder Template" : "New Code Template";
-  const name = window.prompt("Template name", defaultName);
+  const name = await window.awaitPrompt("New Template", "Template name", defaultName);
   if (!name) return;
   const response = await api("/api/templates", {
     method: "POST",
@@ -986,10 +1032,7 @@ async function importHtmlTemplate() {
     showToast("No File Selected", "Choose an HTML file to import.", true);
     return;
   }
-  const name = window.prompt(
-    "Template name",
-    input.files[0].name.replace(/\.html$/i, ""),
-  );
+  const name = await window.awaitPrompt("Import Template", "Template name", input.files[0].name.replace(/\.html$/i, ""));
   if (!name) return;
   const formData = new FormData();
   formData.append("file", input.files[0]);
@@ -1051,16 +1094,16 @@ async function setCurrentTemplateDefault() {
 
 async function deleteCurrentTemplate() {
   if (!state.selectedTemplateId) return;
-  if (!window.confirm("Delete this template? This cannot be undone.")) return;
+  if (!(await window.awaitConfirm("Delete Template", "Delete this template? This cannot be undone."))) return;
   await api(`/api/templates/${state.selectedTemplateId}`, { method: "DELETE" });
   showToast("Template Deleted", "The template was removed.");
   state.selectedTemplateId = null;
   await loadTemplates(false);
 }
 
-function renameCurrentTemplate() {
+async function renameCurrentTemplate() {
   if (!state.selectedTemplate) return;
-  const name = window.prompt("Rename template", state.selectedTemplate.name);
+  const name = await window.awaitPrompt("Rename template", "Enter new name:", state.selectedTemplate.name);
   if (!name) return;
   state.selectedTemplate.name = name.trim() || state.selectedTemplate.name;
   saveDraft({ silent: false }).catch((error) => {
@@ -1586,14 +1629,14 @@ async function saveContactFromModal(event) {
 }
 
 async function deleteContact(contactId) {
-  if (!window.confirm("Delete this contact?")) return;
+  if (!(await window.awaitConfirm("Delete Contact", "Delete this contact?"))) return;
   await api(`/api/contacts/${contactId}`, { method: "DELETE" });
   showToast("Contact Deleted", "The contact was removed.");
   await Promise.all([loadContacts(), loadStats()]);
 }
 
 async function deleteAllContacts() {
-  if (!window.confirm("Delete all contacts? This cannot be undone.")) return;
+  if (!(await window.awaitConfirm("Delete All Contacts", "Delete all contacts? This cannot be undone."))) return;
   const response = await api("/api/contacts", { method: "DELETE" });
   showToast("Contacts Deleted", response.message);
   await Promise.all([loadContacts(), loadStats()]);
