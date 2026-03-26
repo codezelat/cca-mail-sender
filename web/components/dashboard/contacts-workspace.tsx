@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FormEvent, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useToast } from "@/components/providers/toast-provider";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -15,6 +15,17 @@ type ContactsResponse = {
   pages: number;
 };
 
+function formatDate(value?: string | null) {
+  if (!value) return "—";
+  const date = new Date(value.endsWith("Z") ? value : `${value}Z`);
+  return date.toLocaleString([], {
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
 export function ContactsWorkspace() {
   const queryClient = useQueryClient();
   const { pushToast } = useToast();
@@ -25,8 +36,7 @@ export function ContactsWorkspace() {
 
   const contactsQuery = useQuery({
     queryKey: ["contacts-workspace", search],
-    queryFn: () =>
-      apiFetch<ContactsResponse>(`/api/v1/contacts?search=${encodeURIComponent(search)}`)
+    queryFn: () => apiFetch<ContactsResponse>(`/api/v1/contacts?search=${encodeURIComponent(search)}`)
   });
 
   const saveMutation = useMutation({
@@ -41,7 +51,7 @@ export function ContactsWorkspace() {
         }
       }),
     onSuccess: async () => {
-      pushToast("Saved", "Contact updated successfully.");
+      pushToast("Contact Saved", "The contact record was updated.");
       setEditing(null);
       await queryClient.invalidateQueries({ queryKey: ["contacts-workspace"] });
     },
@@ -57,7 +67,7 @@ export function ContactsWorkspace() {
         bodyJson: {}
       }),
     onSuccess: async () => {
-      pushToast("Deleted", "Contact removed.");
+      pushToast("Contact Deleted", "The contact was removed.");
       await queryClient.invalidateQueries({ queryKey: ["contacts-workspace"] });
     },
     onError: (error) => {
@@ -72,7 +82,7 @@ export function ContactsWorkspace() {
         bodyJson: {}
       }),
     onSuccess: async () => {
-      pushToast("Deleted", "All contacts removed.");
+      pushToast("Contacts Deleted", "All contacts were removed.");
       await queryClient.invalidateQueries({ queryKey: ["contacts-workspace"] });
     },
     onError: (error) => {
@@ -80,90 +90,104 @@ export function ContactsWorkspace() {
     }
   });
 
-  const contactCountLabel = useMemo(
-    () => `${contactsQuery.data?.total || 0} contact${(contactsQuery.data?.total || 0) === 1 ? "" : "s"}`,
-    [contactsQuery.data]
-  );
-
-  function submitSearch(event: FormEvent) {
-    event.preventDefault();
-    setSearch(searchDraft);
-  }
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setSearch(searchDraft);
+    }, 250);
+    return () => window.clearTimeout(timeout);
+  }, [searchDraft]);
 
   return (
-    <div className="space-y-6">
-      <section className="bento-card p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <section className="view-panel">
+      <div className="bento-card p-6 md:p-8">
+        <div className="relative z-10 mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-white">Contacts</h1>
-            <p className="mt-1 text-sm text-slate-400">
-              Search, edit, unsubscribe, and maintain your address book with delivery history.
-            </p>
+            <h2 className="bg-gradient-to-r from-white to-gray-400 bg-clip-text text-xl font-semibold text-transparent">
+              Address Book
+            </h2>
           </div>
           <div className="flex items-center gap-3">
-            <form className="flex items-center gap-3" onSubmit={submitSearch}>
-              <input
-                className="premium-input w-72"
-                placeholder="Search email or name"
-                value={searchDraft}
-                onChange={(event) => setSearchDraft(event.target.value)}
-              />
-              <button className="ghost-button px-4 py-3 text-sm">Search</button>
-            </form>
-            <button className="ghost-button px-4 py-3 text-sm" onClick={() => deleteAllMutation.mutate()}>
-              Delete All
+            <input
+              type="text"
+              placeholder="Search contacts..."
+              value={searchDraft}
+              onChange={(event) => setSearchDraft(event.target.value)}
+              className="w-64 rounded-full border border-white/10 bg-black/40 px-4 py-2 text-sm text-white outline-none focus:border-purple-500"
+            />
+            <button
+              type="button"
+              onClick={() => void contactsQuery.refetch()}
+              className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-white transition hover:bg-white/10"
+            >
+              Refresh
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm("Delete all contacts? This cannot be undone.")) {
+                  deleteAllMutation.mutate();
+                }
+              }}
+              className="rounded-full border border-red-500/20 bg-red-500/10 px-4 py-2 text-xs text-red-400 transition hover:bg-red-500/20"
+            >
+              Wipe All
             </button>
           </div>
         </div>
-      </section>
 
-      <section className="bento-card overflow-hidden p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <div className="text-sm text-slate-400">{contactCountLabel}</div>
-          <button className="ghost-button px-4 py-2 text-sm" onClick={() => void contactsQuery.refetch()}>
-            Refresh
-          </button>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="text-xs uppercase tracking-[0.18em] text-slate-500">
+        <div className="relative z-10 overflow-x-auto rounded-xl border border-white/5 bg-black/20">
+          <table className="w-full whitespace-nowrap text-left text-sm">
+            <thead className="bg-white/5 text-xs uppercase tracking-wider text-gray-500">
               <tr>
-                <th className="px-4 py-3">Contact</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Custom Fields</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="px-5 py-3">Contact</th>
+                <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3">Data</th>
+                <th className="px-5 py-3">Last Active</th>
+                <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5 text-slate-300">
+            <tbody className="divide-y divide-white/5 text-gray-300">
               {(contactsQuery.data?.contacts || []).map((contact) => (
                 <tr key={contact.id}>
-                  <td className="px-4 py-4">
-                    <div className="font-medium text-white">{contact.name}</div>
-                    <div className="mt-1 text-xs text-slate-500">{contact.email}</div>
-                    {contact.last_delivery_error ? (
-                      <div className="mt-2 text-xs text-slate-500">{contact.last_delivery_error}</div>
-                    ) : null}
+                  <td className="px-5 py-4">
+                    <div className="font-medium text-white">{contact.name || "There"}</div>
+                    <div className="mt-1 text-xs text-gray-500">{contact.email}</div>
                   </td>
-                  <td className="px-4 py-4">
-                    <StatusBadge value={contact.unsubscribed ? "unsubscribed" : contact.last_delivery_status || "subscribed"} />
+                  <td className="px-5 py-4">
+                    <StatusBadge
+                      value={contact.unsubscribed ? "unsubscribed" : contact.last_delivery_status || "subscribed"}
+                    />
                   </td>
-                  <td className="px-4 py-4 text-xs text-slate-400">
-                    <pre className="overflow-auto whitespace-pre-wrap font-mono">
-                      {JSON.stringify(contact.custom_fields_json || {}, null, 2)}
-                    </pre>
+                  <td className="px-5 py-4 text-gray-400">
+                    <div>{Object.keys(contact.custom_fields_json || {}).length} fields</div>
                   </td>
-                  <td className="px-4 py-4">
+                  <td className="px-5 py-4 text-gray-400">
+                    <div>{contact.last_delivery_status || "—"}</div>
+                    <div className="mt-1 text-xs text-gray-500">
+                      {contact.last_delivery_error || formatDate(contact.updated_at)}
+                    </div>
+                  </td>
+                  <td className="px-5 py-4 text-right">
                     <div className="flex justify-end gap-2">
                       <button
-                        className="ghost-button px-4 py-2 text-xs"
+                        type="button"
                         onClick={() => {
                           setEditing(contact);
                           setCustomFieldsDraft(JSON.stringify(contact.custom_fields_json || {}, null, 2));
                         }}
+                        className="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-white/10"
                       >
                         Edit
                       </button>
-                      <button className="ghost-button px-4 py-2 text-xs" onClick={() => deleteMutation.mutate(contact.id)}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm("Delete this contact?")) {
+                            deleteMutation.mutate(contact.id);
+                          }
+                        }}
+                        className="rounded-full border border-red-500/20 bg-red-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-red-500 transition hover:bg-red-500/20"
+                      >
                         Delete
                       </button>
                     </div>
@@ -172,7 +196,7 @@ export function ContactsWorkspace() {
               ))}
               {!contactsQuery.data?.contacts?.length ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                  <td colSpan={5} className="px-5 py-8 text-center text-gray-500">
                     No contacts found.
                   </td>
                 </tr>
@@ -180,50 +204,59 @@ export function ContactsWorkspace() {
             </tbody>
           </table>
         </div>
-      </section>
+      </div>
 
       {editing ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6">
-          <div className="glass-card w-full max-w-2xl p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">Edit Contact</h2>
-              <button className="text-slate-400" onClick={() => setEditing(null)}>
-                Close
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0a0a0a] p-6 shadow-2xl">
+            <div className="mb-6 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-white">Edit Contact</h3>
+              <button type="button" onClick={() => setEditing(null)} className="text-gray-500 transition hover:text-white">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              <input
-                className="premium-input"
-                value={editing.name}
-                onChange={(event) => setEditing({ ...editing, name: event.target.value })}
-                placeholder="Name"
-              />
-              <input
-                className="premium-input"
-                value={editing.email}
-                onChange={(event) => setEditing({ ...editing, email: event.target.value })}
-                placeholder="Email"
-              />
-              <textarea
-                className="premium-input min-h-48 md:col-span-2 font-mono text-sm"
-                value={customFieldsDraft}
-                onChange={(event) => setCustomFieldsDraft(event.target.value)}
-              />
-              <label className="flex items-center gap-2 text-sm text-slate-300">
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1 block text-xs text-gray-500">Name</label>
+                <input
+                  type="text"
+                  value={editing.name || ""}
+                  onChange={(event) => setEditing({ ...editing, name: event.target.value })}
+                  className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-purple-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-gray-500">Email</label>
+                <input
+                  type="email"
+                  value={editing.email || ""}
+                  onChange={(event) => setEditing({ ...editing, email: event.target.value })}
+                  className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-purple-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-gray-500">Custom Fields (JSON)</label>
+                <textarea
+                  spellCheck="false"
+                  value={customFieldsDraft}
+                  onChange={(event) => setCustomFieldsDraft(event.target.value)}
+                  className="h-32 w-full resize-none rounded-lg border border-white/10 bg-black/40 px-3 py-2 font-mono text-xs text-white outline-none focus:border-purple-500"
+                />
+              </div>
+              <label className="flex cursor-pointer items-center gap-2 pt-2 text-sm text-gray-300">
                 <input
                   type="checkbox"
                   checked={editing.unsubscribed}
                   onChange={(event) => setEditing({ ...editing, unsubscribed: event.target.checked })}
+                  className="h-4 w-4 rounded border-white/10 bg-black/50 accent-purple-500"
                 />
-                Mark unsubscribed
+                Unsubscribed status
               </label>
-            </div>
-            <div className="mt-6 flex justify-end gap-3">
-              <button className="ghost-button px-4 py-2 text-sm" onClick={() => setEditing(null)}>
-                Cancel
-              </button>
               <button
-                className="premium-button px-4 py-2 text-sm"
+                type="button"
+                disabled={saveMutation.isPending}
                 onClick={() => {
                   try {
                     saveMutation.mutate({
@@ -234,14 +267,14 @@ export function ContactsWorkspace() {
                     pushToast("Invalid JSON", "Custom fields must be valid JSON.", "error");
                   }
                 }}
-                disabled={saveMutation.isPending}
+                className="mt-4 w-full rounded-full bg-white py-2 text-sm font-semibold text-black transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {saveMutation.isPending ? "Saving..." : "Save"}
+                {saveMutation.isPending ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </div>
         </div>
       ) : null}
-    </div>
+    </section>
   );
 }

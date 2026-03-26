@@ -4,7 +4,7 @@ export function BrandLogo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
     <img
       src="/logo.png"
       alt="CCA Campaign Manager"
-      className={`${dimensions} rounded-xl shadow-lg shadow-purple-500/20`}
+      className={`${dimensions} rounded-lg shadow-lg shadow-purple-900/20`}
     />
   );
 }

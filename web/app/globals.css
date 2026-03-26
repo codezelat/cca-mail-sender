@@ -22,12 +22,15 @@
 html,
 body {
   min-height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 body {
   background: var(--background);
   color: var(--text);
   font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+  overflow-x: hidden;
 }
 
 a {
@@ -35,13 +38,11 @@ a {
   text-decoration: none;
 }
 
-.app-shell {
+.app-shell,
+.dashboard-shell {
   position: relative;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top center, rgba(124, 58, 237, 0.16), transparent 35%),
-    radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.11), transparent 30%),
-    #000;
+  background: #000;
 }
 
 .glass-nav {
@@ -67,6 +68,20 @@ a {
   transform: translateX(-50%);
   opacity: 0.6;
   z-index: 0;
+  animation: pulse-glow 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    transform: translateX(-50%) scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateX(-50%) scale(1.1);
+    opacity: 0.8;
+  }
 }
 
 .glass-card {
@@ -80,14 +95,31 @@ a {
 .bento-card {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
+  border-radius: 16px;
   transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
 }
 
 .bento-card:hover {
   background: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.15);
-  transform: translateY(-2px);
+}
+
+.view-panel {
+  animation: fade-in 0.3s ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .premium-input {
@@ -106,6 +138,63 @@ a {
   @apply inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em];
 }
 
+.metric-label {
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  color: #9ca3af;
+}
+
 .page-container {
   @apply relative z-10 mx-auto w-full max-w-7xl px-6;
+}
+
+input,
+select,
+textarea {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #fff !important;
+  transition: all 0.2s;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: rgba(168, 85, 247, 0.5) !important;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.2);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #6b7280;
+}
+
+table th {
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 500;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
