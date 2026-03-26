@@ -78,6 +78,19 @@ export function DashboardHome() {
     () => (templatesQuery.data?.templates || []).filter((item) => item.published_version && !item.is_archived),
     [templatesQuery.data]
   );
+  const selectedPublishedTemplate = useMemo(
+    () => publishedTemplates.find((item) => item.id === selectedTemplateId) || null,
+    [publishedTemplates, selectedTemplateId]
+  );
+  const selectedTemplateFields = useMemo(() => {
+    const fields = (selectedPublishedTemplate?.published_version?.merge_fields_schema || []).filter(
+      (field) => field.key !== "unsubscribe_url"
+    );
+    return {
+      required: fields.filter((field) => field.required),
+      optional: fields.filter((field) => !field.required)
+    };
+  }, [selectedPublishedTemplate]);
 
   useEffect(() => {
     if (settingsQuery.data) {
@@ -397,6 +410,60 @@ export function DashboardHome() {
                       {importSession?.original_filename || "Upload will analyze the selected file."}
                     </div>
                   </button>
+                  <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-4">
+                    <div className="text-[11px] uppercase tracking-[0.18em] text-gray-500">
+                      Columns Needed By Template
+                    </div>
+                    {!selectedPublishedTemplate ? (
+                      <p className="mt-2 text-xs text-gray-400">
+                        Choose a published template to see the fields your upload should include.
+                      </p>
+                    ) : (
+                      <div className="mt-2 space-y-3">
+                        <p className="text-xs text-gray-400">
+                          Your file can use different header names. You’ll match them in step 3.
+                        </p>
+                        <div>
+                          <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-yellow-500/80">
+                            Required
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedTemplateFields.required.length ? (
+                              selectedTemplateFields.required.map((field) => (
+                                <span
+                                  key={field.key}
+                                  className="rounded-full border border-yellow-500/20 bg-yellow-500/10 px-3 py-1 text-xs font-semibold text-yellow-200"
+                                >
+                                  {field.label || field.key}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-xs text-gray-500">No required fields.</span>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-gray-500">
+                            Optional
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedTemplateFields.optional.length ? (
+                              selectedTemplateFields.optional.map((field) => (
+                                <span
+                                  key={field.key}
+                                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-gray-300"
+                                >
+                                  {field.label || field.key}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-xs text-gray-500">No optional fields.</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <input
                     ref={fileInputRef}
                     type="file"
