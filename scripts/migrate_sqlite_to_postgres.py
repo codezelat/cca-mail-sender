@@ -3,6 +3,7 @@ import sqlite3
 
 from sqlmodel import Session, SQLModel, create_engine, select
 
+from app.database import sync_postgres_sequences
 from app.models import (  # noqa: F401
     CampaignBatch,
     CampaignRecipient,
@@ -93,6 +94,8 @@ def main() -> None:
                 target.merge(model(**payload))
             target.commit()
             print(f"Migrated {len(rows)} rows from {model.__name__}.")
+
+    sync_postgres_sequences(target_engine)
 
 
 if __name__ == "__main__":

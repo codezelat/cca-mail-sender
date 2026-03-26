@@ -10,7 +10,13 @@ import { apiFetch } from "@/lib/api";
 
 type AuthMode = "login" | "signup";
 
-export function AuthForm({ mode }: { mode: AuthMode }) {
+export function AuthForm({
+  mode,
+  nextPath
+}: {
+  mode: AuthMode;
+  nextPath?: string;
+}) {
   const router = useRouter();
   const { pushToast } = useToast();
   const [email, setEmail] = useState("");
@@ -47,7 +53,12 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
         bodyJson: { email, password }
       });
       pushToast("Success", mode === "login" ? "Logged in successfully." : "Account created successfully.");
-      router.replace("/dashboard");
+      const redirectTarget = nextPath?.startsWith("/") ? nextPath : "/dashboard";
+      if (typeof window !== "undefined") {
+        window.location.assign(redirectTarget);
+        return;
+      }
+      router.replace(redirectTarget);
       router.refresh();
     } catch (error) {
       pushToast(

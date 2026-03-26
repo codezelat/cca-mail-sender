@@ -1,5 +1,22 @@
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://127.0.0.1:8000";
+function isLoopbackHost(hostname: string) {
+  return hostname === "localhost" || hostname === "127.0.0.1";
+}
+
+function resolveApiBaseUrl() {
+  const envBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "");
+  if (typeof window !== "undefined" && isLoopbackHost(window.location.hostname)) {
+    const base = envBaseUrl ? new URL(envBaseUrl) : new URL("http://127.0.0.1:8000");
+    base.protocol = window.location.protocol === "https:" ? "https:" : "http:";
+    base.hostname = window.location.hostname;
+    if (!base.port) {
+      base.port = "8000";
+    }
+    return base.origin;
+  }
+  return envBaseUrl || "http://127.0.0.1:8000";
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 function readCookie(name: string): string | undefined {
   if (typeof document === "undefined") return undefined;
@@ -64,4 +81,4 @@ export function buildUploadForm(entries: Record<string, string | File | Blob | b
   return formData;
 }
 
-export { API_BASE_URL };
+export { API_BASE_URL, resolveApiBaseUrl };

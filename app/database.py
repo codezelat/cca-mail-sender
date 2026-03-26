@@ -2,6 +2,7 @@ import os
 import sqlite3
 from typing import Iterable
 
+from sqlalchemy import Integer, inspect, text
 from sqlmodel import SQLModel, Session, create_engine
 
 from .config import settings
@@ -188,10 +189,51 @@ def run_migrations():
         conn.commit()
 
 
+def sync_postgres_sequences(target_engine=None):
+    target_engine = target_engine or engine
+    url = str(target_engine.url)
+    if not url.startswith("postgresql"):
+        return
+
+    inspector = inspect(target_engine)
+    with target_engine.begin() as connection:
+        for table in SQLModel.metadata.sorted_tables:
+            if table.name not in inspector.get_table_names():
+                continue
+
+            id_column = table.columns.get("id")
+            if id_column is None or not isinstance(id_column.type, Integer):
+                continue
+
+            sequence_name = connection.execute(
+                text("SELECT pg_get_serial_sequence(:table_name, 'id')"),
+                {"table_name": table.name},
+            ).scalar()
+            if not sequence_name:
+                continue
+
+            max_id = connection.execute(
+                text(f'SELECT COALESCE(MAX(id), 0) FROM "{table.name}"')
+            ).scalar()
+            next_value = max(int(max_id or 0), 1)
+            is_called = bool(max_id)
+            connection.execute(
+                text(
+                    "SELECT setval(CAST(:sequence_name AS regclass), :next_value, :is_called)"
+                ),
+                {
+                    "sequence_name": sequence_name,
+                    "next_value": next_value,
+                    "is_called": is_called,
+                },
+            )
+
+
 def create_db_and_tables():
     os.makedirs(DATA_DIR, exist_ok=True)
     SQLModel.metadata.create_all(engine)
     run_migrations()
+    sync_postgres_sequences()
 
 
 def get_session():

@@ -1,5 +1,11 @@
 import { AuthForm } from "@/components/auth/auth-form";
 
-export default function LoginPage() {
-  return <AuthForm mode="login" />;
+type LoginPageProps = {
+  searchParams?: Promise<{ next?: string | string[] | undefined }>;
+};
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const params = (await searchParams) || {};
+  const nextPath = Array.isArray(params.next) ? params.next[0] : params.next;
+  return <AuthForm mode="login" nextPath={nextPath} />;
 }
