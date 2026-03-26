@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 
+import { useDialog } from "@/components/providers/dialog-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { API_BASE_URL, apiFetch, buildUploadForm } from "@/lib/api";
@@ -64,6 +65,7 @@ function createCustomField(existingFields: TemplateField[]) {
 export function TemplatesWorkspace() {
   const queryClient = useQueryClient();
   const { pushToast } = useToast();
+  const { confirm, prompt } = useDialog();
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [draftState, setDraftState] = useState<DraftState | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
@@ -195,7 +197,11 @@ export function TemplatesWorkspace() {
 
   async function createTemplate(editorMode: "builder" | "code") {
     const defaultName = editorMode === "builder" ? "New Builder Template" : "New Code Template";
-    const name = window.prompt("Template name", defaultName);
+    const name = await prompt({
+      title: "New Template",
+      message: "Template name",
+      defaultValue: defaultName
+    });
     if (!name?.trim()) return;
     try {
       const data = await apiFetch<{ template: TemplateSummary }>("/api/v1/templates", {
@@ -236,7 +242,11 @@ export function TemplatesWorkspace() {
 
   async function renameTemplate() {
     if (!draftState) return;
-    const name = window.prompt("Rename template", draftState.name);
+    const name = await prompt({
+      title: "Rename template",
+      message: "Enter new name:",
+      defaultValue: draftState.name
+    });
     if (!name?.trim()) return;
     const nextDraft = { ...draftState, name: name.trim() };
     setDraftState(nextDraft);
@@ -299,7 +309,11 @@ export function TemplatesWorkspace() {
 
   async function deleteTemplate() {
     if (!selectedTemplateId) return;
-    if (!window.confirm("Delete this template? This cannot be undone.")) {
+    const approved = await confirm({
+      title: "Delete Template",
+      message: "Delete this template? This cannot be undone."
+    });
+    if (!approved) {
       return;
     }
     try {

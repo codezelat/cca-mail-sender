@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
+import { useDialog } from "@/components/providers/dialog-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
@@ -29,6 +30,7 @@ function formatDate(value?: string | null) {
 export function ContactsWorkspace() {
   const queryClient = useQueryClient();
   const { pushToast } = useToast();
+  const { confirm } = useDialog();
   const [search, setSearch] = useState("");
   const [searchDraft, setSearchDraft] = useState("");
   const [editing, setEditing] = useState<ContactRecord | null>(null);
@@ -123,8 +125,12 @@ export function ContactsWorkspace() {
             </button>
             <button
               type="button"
-              onClick={() => {
-                if (window.confirm("Delete all contacts? This cannot be undone.")) {
+              onClick={async () => {
+                const approved = await confirm({
+                  title: "Delete All Contacts",
+                  message: "Delete all contacts? This cannot be undone."
+                });
+                if (approved) {
                   deleteAllMutation.mutate();
                 }
               }}
@@ -181,8 +187,12 @@ export function ContactsWorkspace() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          if (window.confirm("Delete this contact?")) {
+                        onClick={async () => {
+                          const approved = await confirm({
+                            title: "Delete Contact",
+                            message: "Delete this contact?"
+                          });
+                          if (approved) {
                             deleteMutation.mutate(contact.id);
                           }
                         }}
