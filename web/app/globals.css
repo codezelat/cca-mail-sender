@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #000000;
+  --panel: rgba(255, 255, 255, 0.03);
+  --panel-strong: rgba(15, 23, 42, 0.45);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --muted-soft: #64748b;
+  --purple-glow: rgba(124, 58, 237, 0.18);
+  --blue-glow: rgba(59, 130, 246, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--text);
+  font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.app-shell {
+  position: relative;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top center, rgba(124, 58, 237, 0.16), transparent 35%),
+    radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.11), transparent 30%),
+    #000;
+}
+
+.glass-nav {
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+
+.hero-glow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(
+    circle,
+    rgba(124, 58, 237, 0.15) 0%,
+    rgba(59, 130, 246, 0.05) 40%,
+    transparent 70%
+  );
+  border-radius: 9999px;
+  filter: blur(80px);
+  top: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0.6;
+  z-index: 0;
+}
+
+.glass-card {
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  box-shadow: 0 20px 60px -24px rgba(0, 0, 0, 0.8);
+}
+
+.bento-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  transition: all 0.3s ease;
+}
+
+.bento-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.premium-input {
+  @apply w-full rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3.5 text-white outline-none transition-all duration-200 placeholder:text-slate-600 focus:border-purple-500/50 focus:ring-4 focus:ring-purple-500/10;
+}
+
+.premium-button {
+  @apply inline-flex items-center justify-center rounded-xl bg-white px-4 py-3 font-semibold text-black transition-all duration-200 hover:bg-slate-100 focus:ring-4 focus:ring-white/20 disabled:cursor-not-allowed disabled:opacity-70;
+}
+
+.ghost-button {
+  @apply inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-medium text-white transition-all duration-200 hover:bg-white/10;
+}
+
+.status-pill {
+  @apply inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em];
+}
+
+.page-container {
+  @apply relative z-10 mx-auto w-full max-w-7xl px-6;
+}

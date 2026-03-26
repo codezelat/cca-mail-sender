@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import or_
 from sqlmodel import Session, func, select
 
-from app.auth import get_current_user
+from app.auth import get_current_user, require_csrf_protection
 from app.database import get_session
 from app.models import (
     CampaignBatch,
@@ -31,6 +31,7 @@ from app.services.import_service import (
     sync_batch_status,
     validate_import_session,
 )
+from app.queue_runtime import enqueue_recipient_delivery
 from app.services.template_service import (
     asset_public_url,
     asset_support_enabled,
@@ -52,14 +53,18 @@ from app.services.template_service import (
     unsubscribe_contact,
     validate_template_version_data,
 )
+from app.services.settings_service import resolve_sender_settings, serialize_user_settings
 
 router = APIRouter()
 
 
 class SettingsPayload(BaseModel):
-    brevo_api_key: Optional[str] = ""
+    brevo_api_key: Optional[str] = None
     sender_email: Optional[str] = ""
     sender_name: Optional[str] = ""
+    use_env_brevo_api_key: bool = False
+    use_env_sender_identity: bool = False
+    clear_manual_brevo_api_key: bool = False
     hourly_limit: int = Field(default=20, ge=1, le=100000)
     daily_limit: int = Field(default=300, ge=1, le=100000)
     default_template_id: Optional[int] = None
@@ -152,30 +157,29 @@ def get_published_version_or_400(
 
 
 @router.get("/api/settings")
+@router.get("/api/v1/settings")
 async def get_settings(
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
     ensure_default_template_for_user(session, user)
     session.refresh(user)
-
     settings = user.settings
     if not settings:
-        return {}
+        settings = UserSettings(user_id=user.id or 0)
+        session.add(settings)
+        session.commit()
+        session.refresh(settings)
+        session.refresh(user)
 
-    return {
-        "brevo_api_key": settings.brevo_api_key or "",
-        "sender_email": settings.sender_email or "",
-        "sender_name": settings.sender_name or "",
-        "hourly_limit": settings.hourly_limit,
-        "daily_limit": settings.daily_limit,
-        "default_template_id": settings.default_template_id,
-    }
+    return serialize_user_settings(settings)
 
 
 @router.post("/api/settings")
+@router.post("/api/v1/settings")
 async def update_settings(
     payload: SettingsPayload,
+    csrf: None = Depends(require_csrf_protection),
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -186,9 +190,27 @@ async def update_settings(
         session.commit()
         session.refresh(settings)
 
-    settings.brevo_api_key = payload.brevo_api_key or None
-    settings.sender_email = payload.sender_email or None
-    settings.sender_name = payload.sender_name or None
+    effective_before = resolve_sender_settings(settings)
+    if payload.use_env_brevo_api_key and not effective_before.env_has_brevo_api_key:
+        raise HTTPException(
+            status_code=400,
+            detail="BREVO_SMTP_API_KEY is not configured in the server environment.",
+        )
+    if payload.use_env_sender_identity and not effective_before.env_has_sender_identity:
+        raise HTTPException(
+            status_code=400,
+            detail="SENDER_EMAIL is not configured in the server environment.",
+        )
+
+    if payload.clear_manual_brevo_api_key:
+        settings.brevo_api_key = None
+    elif payload.brevo_api_key and payload.brevo_api_key.strip():
+        settings.brevo_api_key = payload.brevo_api_key.strip()
+
+    settings.sender_email = (payload.sender_email or "").strip() or None
+    settings.sender_name = (payload.sender_name or "").strip() or None
+    settings.use_env_brevo_api_key = payload.use_env_brevo_api_key
+    settings.use_env_sender_identity = payload.use_env_sender_identity
     settings.hourly_limit = payload.hourly_limit
     settings.daily_limit = payload.daily_limit
 
@@ -199,10 +221,16 @@ async def update_settings(
 
     session.add(settings)
     session.commit()
-    return {"status": "success", "message": "Configuration saved"}
+    session.refresh(settings)
+    return {
+        "status": "success",
+        "message": "Configuration saved",
+        "settings": serialize_user_settings(settings),
+    }
 
 
 @router.get("/api/stats")
+@router.get("/api/v1/stats")
 async def get_stats(
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
@@ -260,6 +288,7 @@ async def get_stats(
 
 
 @router.get("/api/activity")
+@router.get("/api/v1/activity")
 async def get_activity(
     page: int = 1,
     limit: int = 20,
@@ -308,6 +337,7 @@ async def get_activity(
 
 
 @router.get("/api/templates")
+@router.get("/api/v1/templates")
 async def list_templates(
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
@@ -325,8 +355,10 @@ async def list_templates(
 
 
 @router.post("/api/templates")
+@router.post("/api/v1/templates")
 async def create_template_endpoint(
     payload: TemplateCreatePayload,
+    csrf: None = Depends(require_csrf_protection),
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -341,10 +373,12 @@ async def create_template_endpoint(
 
 
 @router.post("/api/templates/import-html")
+@router.post("/api/v1/templates/import-html")
 async def import_template_html(
     file: UploadFile = File(...),
     name: str = Form("Imported HTML Template"),
     make_default: bool = Form(False),
+    csrf: None = Depends(require_csrf_protection),
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -362,6 +396,7 @@ async def import_template_html(
 
 
 @router.get("/api/templates/{template_id}")
+@router.get("/api/v1/templates/{template_id}")
 async def get_template(
     template_id: int,
     user: User = Depends(get_current_user),
@@ -373,9 +408,11 @@ async def get_template(
 
 
 @router.put("/api/templates/{template_id}/draft")
+@router.put("/api/v1/templates/{template_id}/draft")
 async def update_template_draft(
     template_id: int,
     payload: TemplateDraftPayload,
+    csrf: None = Depends(require_csrf_protection),
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -419,8 +456,10 @@ async def update_template_draft(
 
 
 @router.post("/api/templates/{template_id}/publish")
+@router.post("/api/v1/templates/{template_id}/publish")
 async def publish_template_endpoint(
     template_id: int,
+    csrf: None = Depends(require_csrf_protection),
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -440,8 +479,10 @@ async def publish_template_endpoint(
 
 
 @router.post("/api/templates/{template_id}/duplicate")
+@router.post("/api/v1/templates/{template_id}/duplicate")
 async def duplicate_template_endpoint(
     template_id: int,
+    csrf: None = Depends(require_csrf_protection),
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -451,9 +492,11 @@ async def duplicate_template_endpoint(
 
 
 @router.post("/api/templates/{template_id}/archive")
+@router.post("/api/v1/templates/{template_id}/archive")
 async def archive_template_endpoint(
     template_id: int,
     payload: TemplateTogglePayload,
+    csrf: None = Depends(require_csrf_protection),
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -466,8 +509,10 @@ async def archive_template_endpoint(
 
 
 @router.post("/api/templates/{template_id}/default")
+@router.post("/api/v1/templates/{template_id}/default")
 async def set_default_template_endpoint(
     template_id: int,
+    csrf: None = Depends(require_csrf_protection),
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -477,8 +522,10 @@ async def set_default_template_endpoint(
 
 
 @router.delete("/api/templates/{template_id}")
+@router.delete("/api/v1/templates/{template_id}")
 async def delete_template_endpoint(
     template_id: int,
+    csrf: None = Depends(require_csrf_protection),
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -491,9 +538,11 @@ async def delete_template_endpoint(
 
 
 @router.post("/api/templates/{template_id}/preview")
+@router.post("/api/v1/templates/{template_id}/preview")
 async def preview_template_endpoint(
     template_id: int,
     payload: PreviewPayload,
+    csrf: None = Depends(require_csrf_protection),
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -509,25 +558,27 @@ async def preview_template_endpoint(
 
 
 @router.post("/api/templates/{template_id}/test-send")
+@router.post("/api/v1/templates/{template_id}/test-send")
 async def test_send_template(
     template_id: int,
     payload: TestSendPayload,
+    csrf: None = Depends(require_csrf_protection),
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
     template = require_template(session, user, template_id)
     draft = get_or_create_draft_version(session, template)
-    settings = user.settings
-    if not settings or not settings.brevo_api_key or not settings.sender_email:
+    resolved_settings = resolve_sender_settings(user.settings)
+    if not resolved_settings.brevo_api_key or not resolved_settings.sender_email:
         raise HTTPException(
             status_code=400,
-            detail="Configure your Brevo API key and sender email before sending test emails.",
+            detail="Configure a Brevo API key and sender email in Settings or the server environment before sending test emails.",
         )
 
     brevo = BrevoService(
-        settings.brevo_api_key,
-        settings.sender_email,
-        settings.sender_name or "Sender",
+        resolved_settings.brevo_api_key,
+        resolved_settings.sender_email,
+        resolved_settings.sender_name,
     )
     html = render_template_version(draft, payload.sample_data, user_id=user.id)
     subject = render_template_html(draft.subject, payload.sample_data, user_id=user.id)
@@ -543,6 +594,7 @@ async def test_send_template(
 
 
 @router.get("/api/template-assets")
+@router.get("/api/v1/template-assets")
 async def get_template_assets(user: User = Depends(get_current_user)):
     return {
         "enabled": asset_support_enabled(),
@@ -552,8 +604,10 @@ async def get_template_assets(user: User = Depends(get_current_user)):
 
 
 @router.post("/api/template-assets/upload")
+@router.post("/api/v1/template-assets/upload")
 async def upload_template_asset(
     file: UploadFile = File(...),
+    csrf: None = Depends(require_csrf_protection),
     user: User = Depends(get_current_user),
 ):
     if not asset_support_enabled():
@@ -587,9 +641,11 @@ async def upload_template_asset(
 
 
 @router.post("/api/imports/analyze")
+@router.post("/api/v1/imports/analyze")
 async def analyze_import(
     template_id: int = Form(...),
     file: UploadFile = File(...),
+    csrf: None = Depends(require_csrf_protection),
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -602,6 +658,7 @@ async def analyze_import(
 
 
 @router.get("/api/imports/{import_session_id}/sheets")
+@router.get("/api/v1/imports/{import_session_id}/sheets")
 async def list_import_sheets(
     import_session_id: int,
     user: User = Depends(get_current_user),
@@ -613,9 +670,11 @@ async def list_import_sheets(
 
 
 @router.post("/api/imports/{import_session_id}/mapping")
+@router.post("/api/v1/imports/{import_session_id}/mapping")
 async def save_import_mapping(
     import_session_id: int,
     payload: ImportMappingPayload,
+    csrf: None = Depends(require_csrf_protection),
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -634,8 +693,10 @@ async def save_import_mapping(
 
 
 @router.post("/api/imports/{import_session_id}/validate")
+@router.post("/api/v1/imports/{import_session_id}/validate")
 async def validate_import(
     import_session_id: int,
+    csrf: None = Depends(require_csrf_protection),
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -651,8 +712,10 @@ async def validate_import(
 
 
 @router.post("/api/imports/{import_session_id}/stage")
+@router.post("/api/v1/imports/{import_session_id}/stage")
 async def stage_import(
     import_session_id: int,
+    csrf: None = Depends(require_csrf_protection),
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -668,6 +731,7 @@ async def stage_import(
 
 
 @router.get("/api/imports/{import_session_id}/error-report")
+@router.get("/api/v1/imports/{import_session_id}/error-report")
 async def download_import_error_report(
     import_session_id: int,
     user: User = Depends(get_current_user),
@@ -684,6 +748,7 @@ async def download_import_error_report(
 
 
 @router.get("/api/batches")
+@router.get("/api/v1/batches")
 async def list_batches(
     limit: int = 20,
     user: User = Depends(get_current_user),
@@ -699,8 +764,10 @@ async def list_batches(
 
 
 @router.post("/api/batches/{batch_id}/launch")
+@router.post("/api/v1/batches/{batch_id}/launch")
 async def launch_batch_endpoint(
     batch_id: int,
+    csrf: None = Depends(require_csrf_protection),
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -713,6 +780,7 @@ async def launch_batch_endpoint(
 
 
 @router.get("/api/batches/{batch_id}/recipients")
+@router.get("/api/v1/batches/{batch_id}/recipients")
 async def get_batch_recipients(
     batch_id: int,
     page: int = 1,
@@ -755,8 +823,10 @@ async def get_batch_recipients(
 
 
 @router.post("/api/recipients/{recipient_id}/resend")
+@router.post("/api/v1/recipients/{recipient_id}/resend")
 async def resend_recipient(
     recipient_id: int,
+    csrf: None = Depends(require_csrf_protection),
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -787,10 +857,13 @@ async def resend_recipient(
     session.commit()
     session.refresh(duplicate)
     sync_batch_status(session, batch)
+    if duplicate.id:
+        enqueue_recipient_delivery(duplicate.id)
     return {"status": "success", "recipient_id": duplicate.id}
 
 
 @router.get("/api/contacts")
+@router.get("/api/v1/contacts")
 async def list_contacts(
     page: int = 1,
     limit: int = 50,
@@ -837,9 +910,11 @@ async def list_contacts(
 
 
 @router.put("/api/contacts/{contact_id}")
+@router.put("/api/v1/contacts/{contact_id}")
 async def update_contact(
     contact_id: int,
     payload: ContactUpdatePayload,
+    csrf: None = Depends(require_csrf_protection),
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -865,8 +940,10 @@ async def update_contact(
 
 
 @router.delete("/api/contacts/{contact_id}")
+@router.delete("/api/v1/contacts/{contact_id}")
 async def delete_contact(
     contact_id: int,
+    csrf: None = Depends(require_csrf_protection),
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -880,7 +957,9 @@ async def delete_contact(
 
 
 @router.delete("/api/contacts")
+@router.delete("/api/v1/contacts")
 async def delete_all_contacts(
+    csrf: None = Depends(require_csrf_protection),
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -920,3 +999,21 @@ async def unsubscribe(token: str, session: Session = Depends(get_session)):
       </body>
     </html>
     """
+
+
+@router.get("/unsubscribe/{token}", response_class=HTMLResponse)
+async def unsubscribe_path(token: str, session: Session = Depends(get_session)):
+    return await unsubscribe(token, session)
+
+
+@router.get("/api/v1/unsubscribe/{token}")
+async def unsubscribe_v1(token: str, session: Session = Depends(get_session)):
+    try:
+        contact = unsubscribe_contact(session, token)
+        return {
+            "status": "success",
+            "message": f"{contact.email} has been unsubscribed.",
+            "email": contact.email,
+        }
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

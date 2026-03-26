@@ -1,9 +1,11 @@
+from app.config import AppSettings
 from pathlib import Path
 
 from sqlmodel import Session, SQLModel, create_engine
 
-from app.models import Contact, EmailTemplate, EmailTemplateVersion, ImportSession, User
+from app.models import Contact, EmailTemplate, EmailTemplateVersion, ImportSession, User, UserSettings
 from app.services.import_service import evaluate_import_session
+from app.services import settings_service
 from app.services.template_service import (
     ensure_schema,
     render_template_html,
@@ -153,3 +155,81 @@ def test_import_validation_reports_duplicates_and_missing_required_fields(tmp_pa
     assert result["summary_counts"]["updated"] == 1
     assert any("Duplicate email within import file." == row["error"] for row in result["row_errors"])
     assert any("Missing required template fields." == row["error"] for row in result["row_errors"])
+
+
+def test_env_sender_settings_auto_activate_when_manual_values_are_missing(monkeypatch):
+    monkeypatch.setattr(
+        settings_service,
+        "settings",
+        AppSettings(
+            app_name="CCA Campaign Manager",
+            secret_key="secret",
+            jwt_algorithm="HS256",
+            access_token_expire_minutes=15,
+            refresh_token_expire_days=30,
+            database_url="sqlite://",
+            redis_url="redis://127.0.0.1:6379/0",
+            web_origin="http://127.0.0.1:3000",
+            public_base_url="http://127.0.0.1:8000",
+            secure_cookies=False,
+            queue_backend="dramatiq",
+            brevo_smtp_api_key="env-brevo-key",
+            sender_email="ca@codezela.com",
+            sender_name="Codezela Technologies",
+        ),
+    )
+
+    resolved = settings_service.resolve_sender_settings(
+        UserSettings(hourly_limit=25, daily_limit=250)
+    )
+    serialized = settings_service.serialize_user_settings(
+        UserSettings(hourly_limit=25, daily_limit=250)
+    )
+
+    assert resolved.use_env_brevo_api_key is True
+    assert resolved.use_env_sender_identity is True
+    assert resolved.brevo_api_key == "env-brevo-key"
+    assert resolved.sender_email == "ca@codezela.com"
+    assert resolved.sender_name == "Codezela Technologies"
+    assert serialized["effective_brevo_api_key_configured"] is True
+    assert serialized["brevo_api_key"] == ""
+    assert serialized["effective_sender_email"] == "ca@codezela.com"
+
+
+def test_manual_sender_settings_fallback_when_env_preferences_are_enabled_but_env_missing(monkeypatch):
+    monkeypatch.setattr(
+        settings_service,
+        "settings",
+        AppSettings(
+            app_name="CCA Campaign Manager",
+            secret_key="secret",
+            jwt_algorithm="HS256",
+            access_token_expire_minutes=15,
+            refresh_token_expire_days=30,
+            database_url="sqlite://",
+            redis_url="redis://127.0.0.1:6379/0",
+            web_origin="http://127.0.0.1:3000",
+            public_base_url="http://127.0.0.1:8000",
+            secure_cookies=False,
+            queue_backend="dramatiq",
+            brevo_smtp_api_key="",
+            sender_email="",
+            sender_name="",
+        ),
+    )
+
+    resolved = settings_service.resolve_sender_settings(
+        UserSettings(
+            brevo_api_key="manual-brevo-key",
+            sender_email="manual@example.com",
+            sender_name="Manual Sender",
+            use_env_brevo_api_key=True,
+            use_env_sender_identity=True,
+        )
+    )
+
+    assert resolved.use_env_brevo_api_key is False
+    assert resolved.use_env_sender_identity is False
+    assert resolved.brevo_api_key == "manual-brevo-key"
+    assert resolved.sender_email == "manual@example.com"
+    assert resolved.sender_name == "Manual Sender"

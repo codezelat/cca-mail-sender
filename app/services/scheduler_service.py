@@ -10,6 +10,7 @@ from app.database import engine
 from app.models import CampaignBatch, CampaignRecipient, Contact, EmailTemplateVersion, User
 from app.services.brevo_service import BrevoService
 from app.services.import_service import sync_batch_status
+from app.services.settings_service import resolve_sender_settings
 from app.services.template_service import render_template_html, render_template_version
 
 logger = logging.getLogger(__name__)
@@ -40,7 +41,8 @@ class SchedulerService:
                     processed_any = False
                     users = session.exec(select(User)).all()
                     for user in users:
-                        if not user.settings or not user.settings.brevo_api_key:
+                        effective_settings = resolve_sender_settings(user.settings)
+                        if not user.settings or not effective_settings.brevo_api_key:
                             continue
 
                         self._refresh_windows(session, user)
@@ -151,10 +153,11 @@ class SchedulerService:
         recipient: CampaignRecipient,
     ):
         settings = user.settings
+        effective_settings = resolve_sender_settings(settings)
         version = session.get(EmailTemplateVersion, recipient.template_version_id)
         contact = session.get(Contact, recipient.contact_id) if recipient.contact_id else None
 
-        if not settings or not settings.sender_email:
+        if not settings or not effective_settings.sender_email:
             self._mark_failed(
                 session,
                 recipient,
@@ -178,9 +181,9 @@ class SchedulerService:
             return
 
         brevo = BrevoService(
-            settings.brevo_api_key,
-            batch.sender_email_snapshot or settings.sender_email,
-            batch.sender_name_snapshot or settings.sender_name or "Sender",
+            effective_settings.brevo_api_key,
+            batch.sender_email_snapshot or effective_settings.sender_email,
+            batch.sender_name_snapshot or effective_settings.sender_name,
         )
 
         payload = recipient.payload_json or {}

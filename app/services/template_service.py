@@ -12,6 +12,7 @@ from jinja2 import Environment
 from sqlmodel import Session, select
 
 from app.auth import ALGORITHM, SECRET_KEY
+from app.config import settings
 from app.models import (
     CampaignBatch,
     Contact,
@@ -27,7 +28,7 @@ FIELD_KEY_RE = re.compile(r"^[a-z_][a-z0-9_]*$")
 DEFAULT_TEMPLATE_NAME = "CCA Default"
 DEFAULT_TEMPLATE_SUBJECT = "Campaign Update"
 DEFAULT_TEMPLATE_PREHEADER = "A quick update from CCA."
-PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+PUBLIC_BASE_URL = settings.public_base_url
 
 BUILTIN_FIELDS: List[Dict[str, Any]] = [
     {
@@ -71,7 +72,7 @@ BUILTIN_FIELDS: List[Dict[str, Any]] = [
         "label": "Unsubscribe URL",
         "required": False,
         "default_value": "",
-        "sample_value": f"{PUBLIC_BASE_URL}/unsubscribe?token=sample",
+        "sample_value": f"{PUBLIC_BASE_URL}/unsubscribe/sample",
         "description": "System generated unsubscribe URL.",
         "builtin": True,
     },
@@ -779,11 +780,11 @@ def create_template(
         subject=DEFAULT_TEMPLATE_SUBJECT,
         preheader=DEFAULT_TEMPLATE_PREHEADER,
         design_json=build_default_builder_design() if editor_mode == "builder" else {},
-        html_source="" if editor_mode == "builder" else load_legacy_template_source(None),
+        html_source="" if editor_mode == "builder" else load_seed_template_source(),
         compiled_html=compile_template_content(
             editor_mode,
             build_default_builder_design() if editor_mode == "builder" else {},
-            "" if editor_mode == "builder" else load_legacy_template_source(None),
+            "" if editor_mode == "builder" else load_seed_template_source(),
             DEFAULT_TEMPLATE_PREHEADER,
         ),
         merge_fields_schema=ensure_schema([]),
@@ -868,16 +869,11 @@ def set_default_template(session: Session, user: User, template: EmailTemplate):
     session.commit()
 
 
-def load_legacy_template_source(selected_template: Optional[str]) -> str:
-    candidates = []
-    if selected_template:
-        candidates.append(os.path.join("data", "templates", selected_template))
-    candidates.extend(
-        [
-            os.path.join("data", "templates", "mail.html"),
-            "mail.html",
-        ]
-    )
+def load_seed_template_source() -> str:
+    candidates = [
+        os.path.join("data", "templates", "mail.html"),
+        "mail.html",
+    ]
     for path in candidates:
         if path and os.path.exists(path):
             with open(path, "r", encoding="utf-8") as file:
@@ -925,13 +921,7 @@ def ensure_default_template_for_user(session: Session, user: User):
         return
 
     template_name = DEFAULT_TEMPLATE_NAME
-    selected_template = settings.selected_template if settings else None
-    legacy_html = load_legacy_template_source(selected_template)
-    legacy_subject = (
-        settings.subject
-        if settings and settings.subject and settings.subject.strip()
-        else DEFAULT_TEMPLATE_SUBJECT
-    )
+    seed_html = load_seed_template_source()
 
     template = EmailTemplate(
         user_id=user.id or 0,
@@ -950,11 +940,11 @@ def ensure_default_template_for_user(session: Session, user: User):
         version_number=1,
         status="published",
         editor_mode="code",
-        subject=legacy_subject,
+        subject=DEFAULT_TEMPLATE_SUBJECT,
         preheader=DEFAULT_TEMPLATE_PREHEADER,
-        html_source=legacy_html,
-        compiled_html=legacy_html,
-        merge_fields_schema=schema_from_source(legacy_html),
+        html_source=seed_html,
+        compiled_html=seed_html,
+        merge_fields_schema=schema_from_source(seed_html),
         published_at=datetime.utcnow(),
     )
     session.add(published)
@@ -1036,7 +1026,7 @@ def build_unsubscribe_url(user_id: int, email: str) -> str:
         SECRET_KEY,
         algorithm=ALGORITHM,
     )
-    return f"{PUBLIC_BASE_URL}/unsubscribe?token={quote(token)}"
+    return f"{PUBLIC_BASE_URL}/unsubscribe/{quote(token)}"
 
 
 def decode_unsubscribe_token(token: str) -> Dict[str, Any]:
@@ -1072,7 +1062,7 @@ def unsubscribe_contact(session: Session, token: str) -> Contact:
 
 
 def asset_support_enabled() -> bool:
-    return bool(os.getenv("PUBLIC_BASE_URL"))
+    return bool(settings.public_base_url)
 
 
 def asset_public_url(relative_path: str) -> str:

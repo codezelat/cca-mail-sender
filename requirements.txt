@@ -12,3 +12,9 @@ python-dotenv
 httpx
 aiofiles
 pytest
+alembic
+argon2-cffi
+redis
+dramatiq
+psycopg[binary]
+email-validator

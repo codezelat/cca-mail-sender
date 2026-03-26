@@ -18,6 +18,8 @@ from app.models import (
     ImportSession,
     User,
 )
+from app.queue_runtime import enqueue_recipient_delivery
+from app.services.settings_service import resolve_sender_settings
 from app.services.template_service import ensure_schema, render_template_version
 
 SUPPORTED_IMPORT_EXTENSIONS = {".csv", ".xlsx", ".xls"}
@@ -407,8 +409,9 @@ def evaluate_import_session(
     duplicate_count = 0
     for email, rows in email_occurrences.items():
         if len(rows) > 1:
-            duplicate_count += len(rows)
-            for row in rows:
+            valid_rows.append(rows[0])
+            duplicate_count += len(rows) - 1
+            for row in rows[1:]:
                 row_errors.append(
                     {
                         "row_number": row["row_number"],
@@ -418,7 +421,7 @@ def evaluate_import_session(
                     }
                 )
             continue
-        valid_rows.extend(rows)
+        valid_rows.append(rows[0])
 
     existing_contacts = _existing_contacts_map(
         session,
@@ -504,16 +507,17 @@ def stage_batch(
     )
 
     settings = user.settings
+    effective_settings = resolve_sender_settings(settings)
     batch = CampaignBatch(
         user_id=user.id or 0,
         template_version_id=template_version.id or 0,
         name=f"{template_version.subject} • {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}",
         source_filename=import_session.original_filename,
         status="staged",
-        sender_email_snapshot=settings.sender_email if settings else None,
-        sender_name_snapshot=settings.sender_name if settings else None,
-        hourly_limit_snapshot=settings.hourly_limit if settings else 20,
-        daily_limit_snapshot=settings.daily_limit if settings else 300,
+        sender_email_snapshot=effective_settings.sender_email,
+        sender_name_snapshot=effective_settings.sender_name,
+        hourly_limit_snapshot=effective_settings.hourly_limit,
+        daily_limit_snapshot=effective_settings.daily_limit,
         total_recipients=len(valid_rows),
         created_count=result["summary_counts"]["created"],
         updated_count=result["summary_counts"]["updated"],
@@ -609,11 +613,14 @@ def launch_batch(session: Session, batch: CampaignBatch) -> CampaignBatch:
         select(CampaignRecipient).where(CampaignRecipient.batch_id == batch.id)
     ).all()
     queued_count = 0
+    queued_ids: List[int] = []
     for recipient in recipients:
         if recipient.status == "staged":
             recipient.status = "queued"
             recipient.updated_at = datetime.utcnow()
             queued_count += 1
+            if recipient.id:
+                queued_ids.append(recipient.id)
             session.add(recipient)
 
     batch.queued_count = queued_count
@@ -623,6 +630,8 @@ def launch_batch(session: Session, batch: CampaignBatch) -> CampaignBatch:
     session.add(batch)
     session.commit()
     session.refresh(batch)
+    for recipient_id in queued_ids:
+        enqueue_recipient_delivery(recipient_id)
     return batch
 
 

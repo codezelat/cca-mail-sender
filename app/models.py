@@ -17,6 +17,7 @@ class User(SQLModel, table=True):
     templates: List["EmailTemplate"] = Relationship(back_populates="user")
     batches: List["CampaignBatch"] = Relationship(back_populates="user")
     import_sessions: List["ImportSession"] = Relationship(back_populates="user")
+    sessions: List["UserSession"] = Relationship(back_populates="user")
 
 
 class UserSettings(SQLModel, table=True):
@@ -26,10 +27,10 @@ class UserSettings(SQLModel, table=True):
     brevo_api_key: Optional[str] = None
     sender_email: Optional[str] = None
     sender_name: Optional[str] = None
-    subject: Optional[str] = None
+    use_env_brevo_api_key: bool = Field(default=False)
+    use_env_sender_identity: bool = Field(default=False)
     hourly_limit: int = Field(default=20)
     daily_limit: int = Field(default=300)
-    selected_template: Optional[str] = None
     default_template_id: Optional[int] = Field(
         default=None, foreign_key="emailtemplate.id"
     )
@@ -157,6 +158,7 @@ class CampaignRecipient(SQLModel, table=True):
     render_snapshot_json: Dict[str, Any] = Field(
         default_factory=dict, sa_column=Column(JSON)
     )
+    attempt_count: int = Field(default=0)
     error_message: Optional[str] = None
     message_id: Optional[str] = None
     delivered_at: Optional[datetime] = None
@@ -196,6 +198,23 @@ class ImportSession(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     user: Optional["User"] = Relationship(back_populates="import_sessions")
+
+
+class UserSession(SQLModel, table=True):
+    id: str = Field(primary_key=True, index=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    refresh_token_hash: str = Field(index=True)
+    csrf_token_hash: str = Field(index=True)
+    token_family: str = Field(index=True)
+    user_agent: Optional[str] = None
+    ip_address: Optional[str] = None
+    revoked_at: Optional[datetime] = None
+    expires_at: datetime
+    last_seen_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    user: Optional["User"] = Relationship(back_populates="sessions")
 
 
 class Job(SQLModel, table=True):

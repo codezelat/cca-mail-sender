@@ -1,0 +1,115 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: cca_mail_sender
+      POSTGRES_USER: cca
+      POSTGRES_PASSWORD: cca
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cca -d cca_mail_sender"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      APP_NAME: ${APP_NAME:-CCA Campaign Manager}
+      SECRET_KEY: ${SECRET_KEY:-change-me}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-30}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://cca:cca@postgres:5432/cca_mail_sender}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8000}
+      SECURE_COOKIES: "${SECURE_COOKIES:-false}"
+      QUEUE_BACKEND: ${QUEUE_BACKEND:-dramatiq}
+      BREVO_SMTP_API_KEY: ${BREVO_SMTP_API_KEY:-}
+      SENDER_EMAIL: ${SENDER_EMAIL:-}
+      SENDER_NAME: ${SENDER_NAME:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "alembic upgrade head &&
+      uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: >
+      sh -c "alembic upgrade head &&
+      dramatiq app.tasks --processes 1 --threads 4"
+    environment:
+      APP_NAME: ${APP_NAME:-CCA Campaign Manager}
+      SECRET_KEY: ${SECRET_KEY:-change-me}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-30}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://cca:cca@postgres:5432/cca_mail_sender}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8000}
+      SECURE_COOKIES: "${SECURE_COOKIES:-false}"
+      QUEUE_BACKEND: ${QUEUE_BACKEND:-dramatiq}
+      BREVO_SMTP_API_KEY: ${BREVO_SMTP_API_KEY:-}
+      SENDER_EMAIL: ${SENDER_EMAIL:-}
+      SENDER_NAME: ${SENDER_NAME:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    volumes:
+      - ./data:/app/data
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
+  redis_data:

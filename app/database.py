@@ -4,6 +4,8 @@ from typing import Iterable
 
 from sqlmodel import SQLModel, Session, create_engine
 
+from .config import settings
+
 # Import all models so SQLModel registers them.
 from .models import (  # noqa: F401
     CampaignBatch,
@@ -14,15 +16,21 @@ from .models import (  # noqa: F401
     ImportSession,
     Job,
     User,
+    UserSession,
     UserSettings,
 )
 
 DATA_DIR = "data"
 sqlite_file_name = os.path.join(DATA_DIR, "app.db")
 sqlite_url = f"sqlite:///{sqlite_file_name}"
+database_url = settings.database_url or sqlite_url
 
-connect_args = {"check_same_thread": False}
-engine = create_engine(sqlite_url, connect_args=connect_args)
+connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
+engine = create_engine(
+    database_url,
+    connect_args=connect_args,
+    pool_pre_ping=not database_url.startswith("sqlite"),
+)
 
 
 def _table_columns(conn: sqlite3.Connection, table_name: str) -> set[str]:
@@ -52,12 +60,27 @@ def _create_indexes(conn: sqlite3.Connection, statements: Iterable[str]):
 def run_migrations():
     os.makedirs(DATA_DIR, exist_ok=True)
 
+    if not database_url.startswith("sqlite"):
+        return
+
     with sqlite3.connect(sqlite_file_name) as conn:
         _add_column_if_missing(
             conn,
             "usersettings",
             "default_template_id",
             "default_template_id INTEGER",
+        )
+        _add_column_if_missing(
+            conn,
+            "usersettings",
+            "use_env_brevo_api_key",
+            "use_env_brevo_api_key INTEGER DEFAULT 0",
+        )
+        _add_column_if_missing(
+            conn,
+            "usersettings",
+            "use_env_sender_identity",
+            "use_env_sender_identity INTEGER DEFAULT 0",
         )
 
         _add_column_if_missing(
@@ -89,6 +112,24 @@ def run_migrations():
             "contact",
             "last_delivery_error",
             "last_delivery_error TEXT",
+        )
+        _add_column_if_missing(
+            conn,
+            "campaignrecipient",
+            "attempt_count",
+            "attempt_count INTEGER DEFAULT 0",
+        )
+        _add_column_if_missing(
+            conn,
+            "usersession",
+            "token_family",
+            "token_family TEXT",
+        )
+        _add_column_if_missing(
+            conn,
+            "usersession",
+            "csrf_token_hash",
+            "csrf_token_hash TEXT",
         )
 
         conn.execute(
@@ -137,6 +178,10 @@ def run_migrations():
                 """
                 CREATE INDEX IF NOT EXISTS ix_campaignbatch_user_status
                 ON campaignbatch (user_id, status)
+                """,
+                """
+                CREATE INDEX IF NOT EXISTS ix_usersession_user_expiry
+                ON usersession (user_id, expires_at)
                 """,
             ],
         )
