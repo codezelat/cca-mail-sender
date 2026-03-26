@@ -10,10 +10,6 @@
 
 **CCA Campaign Manager** is a production-oriented email campaign platform built for Brevo-backed delivery, typed template management, staged CSV/XLSX imports, queue-based sending, and a premium dashboard workflow.
 
-Repository: [https://github.com/codezelat/cca-mail-sender](https://github.com/codezelat/cca-mail-sender)
-
-The current frontend preserves the existing black/slate, purple-blue glow, glass-panel UI language while replacing the legacy ad hoc HTML/JS stack with a structured Next.js application. The backend is FastAPI-based, versioned under `/api/v1`, and backed by Postgres plus Redis for modern runtime behavior.
-
 ## 📌 Table of Contents
 
 - [Why This Project Exists](#-why-this-project-exists)
