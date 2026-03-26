@@ -196,11 +196,15 @@ async def logout_v1(
     response: Response,
     request: Request,
     all_sessions: bool = False,
-    current=Depends(get_authenticated_session),
     session: Session = Depends(get_session),
 ):
-    user, _user_session = current
-    if all_sessions:
+    user = None
+    try:
+        user, _user_session = get_authenticated_session(request, session)
+    except HTTPException:
+        user = None
+
+    if all_sessions and user:
         revoke_all_user_sessions(session, user)
     else:
         revoke_current_session(request, session)

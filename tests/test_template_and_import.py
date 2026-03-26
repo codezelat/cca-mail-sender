@@ -1,9 +1,15 @@
-from app.config import AppSettings
+import asyncio
+from datetime import datetime, timedelta
 from pathlib import Path
 
+from fastapi import Request, Response
+from app.config import AppSettings
 from sqlmodel import Session, SQLModel, create_engine
 
+from app.auth import _hash_value
 from app.models import Contact, EmailTemplate, EmailTemplateVersion, ImportSession, User, UserSettings
+from app.models import UserSession
+from app.routers.auth_routes import logout_v1
 from app.services.import_service import evaluate_import_session
 from app.services import settings_service
 from app.services.template_service import (
@@ -233,3 +239,50 @@ def test_manual_sender_settings_fallback_when_env_preferences_are_enabled_but_en
     assert resolved.brevo_api_key == "manual-brevo-key"
     assert resolved.sender_email == "manual@example.com"
     assert resolved.sender_name == "Manual Sender"
+
+
+def test_logout_clears_cookies_even_without_valid_access_session():
+    engine = create_engine("sqlite://")
+    SQLModel.metadata.create_all(engine)
+
+    with Session(engine) as session:
+        user = User(email="owner@example.com", password_hash="hash")
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+
+        user_session = UserSession(
+            id="session-1",
+            user_id=user.id,
+            refresh_token_hash=_hash_value("refresh-secret"),
+            csrf_token_hash=_hash_value("csrf-secret"),
+            token_family="family-1",
+            expires_at=datetime.utcnow() + timedelta(days=7),
+        )
+        session.add(user_session)
+        session.commit()
+
+        request = Request(
+            {
+                "type": "http",
+                "method": "POST",
+                "path": "/api/v1/auth/logout",
+                "headers": [(b"cookie", b"cca_refresh=session-1.refresh-secret")],
+                "query_string": b"",
+                "client": ("127.0.0.1", 3000),
+                "server": ("testserver", 80),
+                "scheme": "http",
+            }
+        )
+        response = Response()
+
+        result = asyncio.run(logout_v1(response=response, request=request, session=session))
+
+        session.refresh(user_session)
+
+    assert result == {"status": "success"}
+    assert user_session.revoked_at is not None
+    cookie_headers = [value.decode() for key, value in response.raw_headers if key == b"set-cookie"]
+    assert any(header.startswith("cca_access=") for header in cookie_headers)
+    assert any(header.startswith("cca_refresh=") for header in cookie_headers)
+    assert any(header.startswith("cca_csrf=") for header in cookie_headers)
