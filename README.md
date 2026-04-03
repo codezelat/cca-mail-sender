@@ -7,8 +7,9 @@
 [![Postgres](https://img.shields.io/badge/Postgres-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Redis](https://img.shields.io/badge/Redis-D92D2A?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/)
 [![Brevo](https://img.shields.io/badge/Brevo-0B0D17?style=for-the-badge)](https://www.brevo.com/)
+[![Kit](https://img.shields.io/badge/Kit-111111?style=for-the-badge)](https://kit.com/)
 
-**CCA Campaign Manager** is a production-oriented email campaign platform built for Brevo-backed delivery, typed template management, staged CSV/XLSX imports, queue-based sending, and a premium dashboard workflow.
+**CCA Campaign Manager** is a production-oriented email campaign platform built for Brevo or Kit delivery, typed template management, staged CSV/XLSX imports, queue-based sending, and a premium dashboard workflow.
 
 ## 📌 Table of Contents
 
@@ -21,7 +22,7 @@
 - [Environment Configuration](#-environment-configuration)
 - [Run with Docker Compose](#-run-with-docker-compose)
 - [Run Locally Without Docker](#-run-locally-without-docker)
-- [Brevo and Sender Configuration](#-brevo-and-sender-configuration)
+- [Provider and Sender Configuration](#-provider-and-sender-configuration)
 - [Database Migration](#-database-migration)
 - [Testing and Verification](#-testing-and-verification)
 - [Security Notes](#-security-notes)
@@ -71,7 +72,7 @@ The result is not an MVP shell. It is a structured application with:
 ### Production-minded runtime behavior
 
 - environment-driven sender configuration
-- support for server-side Brevo API key usage without exposing the secret in the browser UI
+- support for server-side provider API key usage without exposing the secret in the browser UI
 - local asset serving via `PUBLIC_BASE_URL`
 - deterministic sending against the locked template version snapshot
 - fallback inline scheduler support when queue mode is disabled
@@ -161,9 +162,9 @@ Technical improvements were made underneath the visual layer:
 ### Settings
 
 - store per-account limits and template defaults
-- keep Brevo API keys in the database when desired
-- optionally use `BREVO_SMTP_API_KEY`, `SENDER_EMAIL`, and `SENDER_NAME` directly from the server environment
-- prevent the dashboard from exposing the env Brevo API key value
+- keep provider API keys in the database when desired
+- optionally use `EMAIL_PROVIDER`, provider API key env vars, `SENDER_EMAIL`, and `SENDER_NAME` directly from the server environment
+- prevent the dashboard from exposing the env provider API key value
 
 ## 📁 Project Structure
 
@@ -230,15 +231,27 @@ NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
 SECURE_COOKIES=false
 ```
 
-### Optional Brevo defaults from the server environment
+### Provider selection and server defaults
 
 ```env
+EMAIL_PROVIDER=brevo
 BREVO_SMTP_API_KEY=
+KIT_API_KEY=
+KIT_EMAIL_TEMPLATE_ID=0
+KIT_BROADCAST_POLL_INTERVAL_SECONDS=5
+KIT_BROADCAST_TIMEOUT_SECONDS=300
 SENDER_EMAIL=
 SENDER_NAME=
 ```
 
-When these three env values are present, the dashboard settings page can use them directly. The UI exposes a “use `.env`” mode for Brevo and sender identity, while keeping manual per-user settings available too.
+Set `EMAIL_PROVIDER` to `brevo` or `kit`.
+
+- when `EMAIL_PROVIDER=brevo`, the runtime uses `BREVO_SMTP_API_KEY`
+- when `EMAIL_PROVIDER=kit`, the runtime uses `KIT_API_KEY`
+- `KIT_EMAIL_TEMPLATE_ID` is optional; when left as `0`, the backend auto-selects a Kit HTML-capable email template
+- `SENDER_EMAIL` and `SENDER_NAME` are shared by both providers
+
+When the active provider key and sender identity exist in `.env`, the dashboard settings page can use them directly without exposing the raw env secret to the browser.
 
 ## 🐳 Run with Docker Compose
 
@@ -265,7 +278,7 @@ Expected local URLs:
 ### Docker notes
 
 - the API and worker both read from environment values
-- `docker-compose.yml` now forwards `BREVO_SMTP_API_KEY`, `SENDER_EMAIL`, and `SENDER_NAME`
+- `docker-compose.yml` now forwards `EMAIL_PROVIDER`, `BREVO_SMTP_API_KEY`, `KIT_API_KEY`, `KIT_EMAIL_TEMPLATE_ID`, `KIT_BROADCAST_POLL_INTERVAL_SECONDS`, `KIT_BROADCAST_TIMEOUT_SECONDS`, `SENDER_EMAIL`, and `SENDER_NAME`
 - the API and worker run `alembic upgrade head` before starting
 - `NEXT_PUBLIC_API_BASE_URL` is passed to the web container
 
@@ -324,7 +337,7 @@ npm install
 npm run dev
 ```
 
-## 📬 Brevo and Sender Configuration
+## 📬 Provider and Sender Configuration
 
 There are now two supported configuration paths.
 
@@ -333,6 +346,7 @@ There are now two supported configuration paths.
 Set these in `.env`:
 
 ```env
+EMAIL_PROVIDER=brevo
 BREVO_SMTP_API_KEY=your-real-brevo-key
 SENDER_EMAIL=you@example.com
 SENDER_NAME=Your Company
@@ -340,20 +354,32 @@ SENDER_NAME=Your Company
 
 Then in the dashboard settings page:
 
-- enable the “use `.env`” option for Brevo
+- enable the “use `.env`” option for the active provider
 - enable the “use `.env`” option for sender identity
 
 Benefits:
 
-- the Brevo key does not need to be typed into the UI
+- the provider key does not need to be typed into the UI
 - server-managed credentials can be shared across operators
 - the frontend never receives the raw env key
+
+For Kit-backed delivery, use:
+
+```env
+EMAIL_PROVIDER=kit
+KIT_API_KEY=your-real-kit-key
+KIT_EMAIL_TEMPLATE_ID=0
+KIT_BROADCAST_POLL_INTERVAL_SECONDS=5
+KIT_BROADCAST_TIMEOUT_SECONDS=300
+SENDER_EMAIL=you@example.com
+SENDER_NAME=Your Company
+```
 
 ### Option 2: manual per-account configuration
 
 Keep the env fields empty and enter:
 
-- Brevo API key
+- provider API key for the active provider
 - sender email
 - sender name
 
@@ -362,8 +388,21 @@ in the dashboard settings form for that account.
 ### Effective behavior
 
 - if env defaults exist and no manual value is stored yet, the backend can automatically use the env value
+- provider choice is controlled globally through `EMAIL_PROVIDER`
 - the batch snapshot stores sender identity at stage time
 - test-send and delivery both resolve settings through the same runtime path
+- Brevo keeps the current recipient-by-recipient delivery path
+- Kit uses a batch-oriented path: temporary subscribers are created or updated, attached to a delivery tag, sent through a broadcast, then untagged and unsubscribed after the broadcast completes
+
+### Kit caveat
+
+Kit does not currently expose a public delete-subscriber API. In this repository's cleanup mode, successful Kit deliveries unsubscribe the temporary subscriber after send so the account behaves as close to send-only as Kit allows.
+
+Tradeoff:
+
+- the subscriber record is not hard-deleted from Kit
+- future sends to the same email address can fail if that Kit subscriber is already unsubscribed or otherwise non-active, because Kit's public API does not expose a reliable reactivation flow
+- temporary per-batch tags remain in Kit because Kit's public API does not expose a delete-tag endpoint
 
 ## 🗃️ Database Migration
 
@@ -413,9 +452,9 @@ This project includes several security-oriented defaults:
 - Argon2id password hashing when available
 - session rotation and revocation support
 - per-user data isolation across API routes
-- environment-backed secret handling for Brevo credentials
+- environment-backed secret handling for provider credentials
 - unsubscribe-aware delivery suppression
-- no raw env Brevo key sent back to the frontend
+- no raw env provider key sent back to the frontend
 
 ## ⚙️ Operational Notes
 
@@ -463,8 +502,10 @@ WATCHFILES_FORCE_POLLING=1 uvicorn app.main:app --reload
 
 Verify at least one valid path exists:
 
-- manual Brevo key + manual sender email
-- or env-backed `BREVO_SMTP_API_KEY` + `SENDER_EMAIL`
+- manual provider key + manual sender email
+- or env-backed provider key + `SENDER_EMAIL`
+- if `EMAIL_PROVIDER=brevo`, the env key is `BREVO_SMTP_API_KEY`
+- if `EMAIL_PROVIDER=kit`, the env key is `KIT_API_KEY`
 
 ### The web app cannot reach the API
 
@@ -480,7 +521,9 @@ Check:
 
 - `redis` is healthy
 - `worker` is running
-- `BREVO_SMTP_API_KEY`, `SENDER_EMAIL`, and `SENDER_NAME` are available in the API and worker environment
+- the active provider env vars are available in the API and worker environment
+- for Brevo: `EMAIL_PROVIDER=brevo`, `BREVO_SMTP_API_KEY`, `SENDER_EMAIL`, `SENDER_NAME`
+- for Kit: `EMAIL_PROVIDER=kit`, `KIT_API_KEY`, `SENDER_EMAIL`, `SENDER_NAME`
 
 ## 🧭 Recommended Commands
 

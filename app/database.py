@@ -83,6 +83,12 @@ def run_migrations():
             "use_env_sender_identity",
             "use_env_sender_identity INTEGER DEFAULT 0",
         )
+        _add_column_if_missing(
+            conn,
+            "usersettings",
+            "kit_api_key",
+            "kit_api_key TEXT",
+        )
 
         _add_column_if_missing(
             conn,

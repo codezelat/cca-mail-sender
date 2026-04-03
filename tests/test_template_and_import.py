@@ -179,7 +179,12 @@ def test_env_sender_settings_auto_activate_when_manual_values_are_missing(monkey
             public_base_url="http://127.0.0.1:8000",
             secure_cookies=False,
             queue_backend="dramatiq",
+            email_provider="brevo",
             brevo_smtp_api_key="env-brevo-key",
+            kit_api_key="",
+            kit_email_template_id=0,
+            kit_broadcast_poll_interval_seconds=5,
+            kit_broadcast_timeout_seconds=300,
             sender_email="ca@codezela.com",
             sender_name="Codezela Technologies",
         ),
@@ -192,13 +197,14 @@ def test_env_sender_settings_auto_activate_when_manual_values_are_missing(monkey
         UserSettings(hourly_limit=25, daily_limit=250)
     )
 
-    assert resolved.use_env_brevo_api_key is True
+    assert resolved.provider == "brevo"
+    assert resolved.use_env_provider_api_key is True
     assert resolved.use_env_sender_identity is True
-    assert resolved.brevo_api_key == "env-brevo-key"
+    assert resolved.provider_api_key == "env-brevo-key"
     assert resolved.sender_email == "ca@codezela.com"
     assert resolved.sender_name == "Codezela Technologies"
-    assert serialized["effective_brevo_api_key_configured"] is True
-    assert serialized["brevo_api_key"] == ""
+    assert serialized["effective_provider_api_key_configured"] is True
+    assert serialized["provider_api_key"] == ""
     assert serialized["effective_sender_email"] == "ca@codezela.com"
 
 
@@ -218,7 +224,12 @@ def test_manual_sender_settings_fallback_when_env_preferences_are_enabled_but_en
             public_base_url="http://127.0.0.1:8000",
             secure_cookies=False,
             queue_backend="dramatiq",
+            email_provider="brevo",
             brevo_smtp_api_key="",
+            kit_api_key="",
+            kit_email_template_id=0,
+            kit_broadcast_poll_interval_seconds=5,
+            kit_broadcast_timeout_seconds=300,
             sender_email="",
             sender_name="",
         ),
@@ -234,11 +245,56 @@ def test_manual_sender_settings_fallback_when_env_preferences_are_enabled_but_en
         )
     )
 
-    assert resolved.use_env_brevo_api_key is False
+    assert resolved.provider == "brevo"
+    assert resolved.use_env_provider_api_key is False
     assert resolved.use_env_sender_identity is False
-    assert resolved.brevo_api_key == "manual-brevo-key"
+    assert resolved.provider_api_key == "manual-brevo-key"
     assert resolved.sender_email == "manual@example.com"
     assert resolved.sender_name == "Manual Sender"
+
+
+def test_kit_provider_uses_kit_env_api_key(monkeypatch):
+    monkeypatch.setattr(
+        settings_service,
+        "settings",
+        AppSettings(
+            app_name="CCA Campaign Manager",
+            secret_key="secret",
+            jwt_algorithm="HS256",
+            access_token_expire_minutes=15,
+            refresh_token_expire_days=30,
+            database_url="sqlite://",
+            redis_url="redis://127.0.0.1:6379/0",
+            web_origin="http://127.0.0.1:3000",
+            public_base_url="http://127.0.0.1:8000",
+            secure_cookies=False,
+            queue_backend="dramatiq",
+            email_provider="kit",
+            brevo_smtp_api_key="env-brevo-key",
+            kit_api_key="env-kit-key",
+            kit_email_template_id=9,
+            kit_broadcast_poll_interval_seconds=5,
+            kit_broadcast_timeout_seconds=300,
+            sender_email="kit@example.com",
+            sender_name="Kit Sender",
+        ),
+    )
+
+    resolved = settings_service.resolve_sender_settings(
+        UserSettings(
+            kit_api_key="manual-kit-key",
+            sender_email="manual@example.com",
+            sender_name="Manual Sender",
+            use_env_brevo_api_key=True,
+            use_env_sender_identity=True,
+        )
+    )
+
+    assert resolved.provider == "kit"
+    assert resolved.use_env_provider_api_key is True
+    assert resolved.provider_api_key == "env-kit-key"
+    assert resolved.sender_email == "kit@example.com"
+    assert resolved.sender_name == "Kit Sender"
 
 
 def test_logout_clears_cookies_even_without_valid_access_session():

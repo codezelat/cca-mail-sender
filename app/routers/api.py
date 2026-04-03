@@ -9,6 +9,7 @@ from sqlalchemy import or_
 from sqlmodel import Session, func, select
 
 from app.auth import get_current_user, require_csrf_protection
+from app.config import settings
 from app.database import get_session
 from app.models import (
     CampaignBatch,
@@ -31,10 +32,14 @@ from app.services.import_service import (
     sync_batch_status,
     validate_import_session,
 )
+from app.services.kit_service import KitApiError, KitService, KitSubscriberStateError
 from app.queue_runtime import enqueue_recipient_delivery
 from app.services.template_service import (
     asset_public_url,
     asset_support_enabled,
+    build_provider_payload,
+    compile_template_content,
+    convert_template_source_to_kit_liquid,
     create_html_import_template,
     create_template,
     delete_template,
@@ -59,12 +64,12 @@ router = APIRouter()
 
 
 class SettingsPayload(BaseModel):
-    brevo_api_key: Optional[str] = None
+    provider_api_key: Optional[str] = None
     sender_email: Optional[str] = ""
     sender_name: Optional[str] = ""
-    use_env_brevo_api_key: bool = False
+    use_env_provider_api_key: bool = False
     use_env_sender_identity: bool = False
-    clear_manual_brevo_api_key: bool = False
+    clear_manual_provider_api_key: bool = False
     hourly_limit: int = Field(default=20, ge=1, le=100000)
     daily_limit: int = Field(default=300, ge=1, le=100000)
     default_template_id: Optional[int] = None
@@ -191,10 +196,12 @@ async def update_settings(
         session.refresh(settings)
 
     effective_before = resolve_sender_settings(settings)
-    if payload.use_env_brevo_api_key and not effective_before.env_has_brevo_api_key:
+    provider_name = effective_before.provider.upper()
+    if payload.use_env_provider_api_key and not effective_before.env_has_provider_api_key:
+        env_key_name = "KIT_API_KEY" if effective_before.provider == "kit" else "BREVO_SMTP_API_KEY"
         raise HTTPException(
             status_code=400,
-            detail="BREVO_SMTP_API_KEY is not configured in the server environment.",
+            detail=f"{env_key_name} is not configured in the server environment.",
         )
     if payload.use_env_sender_identity and not effective_before.env_has_sender_identity:
         raise HTTPException(
@@ -202,14 +209,20 @@ async def update_settings(
             detail="SENDER_EMAIL is not configured in the server environment.",
         )
 
-    if payload.clear_manual_brevo_api_key:
-        settings.brevo_api_key = None
-    elif payload.brevo_api_key and payload.brevo_api_key.strip():
-        settings.brevo_api_key = payload.brevo_api_key.strip()
+    if payload.clear_manual_provider_api_key:
+        if effective_before.provider == "kit":
+            settings.kit_api_key = None
+        else:
+            settings.brevo_api_key = None
+    elif payload.provider_api_key and payload.provider_api_key.strip():
+        if effective_before.provider == "kit":
+            settings.kit_api_key = payload.provider_api_key.strip()
+        else:
+            settings.brevo_api_key = payload.provider_api_key.strip()
 
     settings.sender_email = (payload.sender_email or "").strip() or None
     settings.sender_name = (payload.sender_name or "").strip() or None
-    settings.use_env_brevo_api_key = payload.use_env_brevo_api_key
+    settings.use_env_brevo_api_key = payload.use_env_provider_api_key
     settings.use_env_sender_identity = payload.use_env_sender_identity
     settings.hourly_limit = payload.hourly_limit
     settings.daily_limit = payload.daily_limit
@@ -569,14 +582,91 @@ async def test_send_template(
     template = require_template(session, user, template_id)
     draft = get_or_create_draft_version(session, template)
     resolved_settings = resolve_sender_settings(user.settings)
-    if not resolved_settings.brevo_api_key or not resolved_settings.sender_email:
+    if not resolved_settings.provider_api_key or not resolved_settings.sender_email:
         raise HTTPException(
             status_code=400,
-            detail="Configure a Brevo API key and sender email in Settings or the server environment before sending test emails.",
+            detail=f"Configure a {resolved_settings.provider.title()} API key and sender email in Settings or the server environment before sending test emails.",
         )
 
+    if resolved_settings.provider == "kit":
+        kit = KitService(
+            resolved_settings.provider_api_key,
+            resolved_settings.sender_email,
+            resolved_settings.sender_name,
+            email_template_id=settings.kit_email_template_id,
+        )
+        schema = ensure_schema(draft.merge_fields_schema)
+        labels_by_key = {
+            field["key"]: field["label"]
+            for field in schema
+            if field["key"] not in {"email", "first_name"}
+        }
+        field_labels = kit.ensure_custom_fields(labels_by_key)
+        provider_payload = build_provider_payload(
+            payload.sample_data,
+            user_id=user.id,
+            email=payload.test_email,
+        )
+        fields_by_label = {
+            label: str(provider_payload.get(key) or "")
+            for key, label in field_labels.items()
+        }
+        compiled_html = draft.compiled_html or compile_template_content(
+            draft.editor_mode,
+            draft.design_json,
+            draft.html_source,
+            draft.preheader,
+        )
+        html_template = convert_template_source_to_kit_liquid(compiled_html, html_mode=True)
+        subject_template = convert_template_source_to_kit_liquid(draft.subject, html_mode=False)
+        preview_template = convert_template_source_to_kit_liquid(draft.preheader or " ", html_mode=False)
+
+        tag_id = kit.create_tag(f"CCA Test Delivery User {user.id}")
+        subscriber_id: Optional[int] = None
+        broadcast_id: Optional[int] = None
+        try:
+            subscriber = kit.create_or_update_subscriber(
+                payload.test_email,
+                str(provider_payload.get("first_name") or provider_payload.get("name") or "There"),
+                fields_by_label,
+            )
+            subscriber_id = subscriber.id
+            tagged = kit.tag_subscriber_by_email(tag_id, payload.test_email)
+            subscriber_id = tagged.id
+            broadcast_id = kit.create_broadcast(
+                subject=subject_template or draft.subject,
+                preview_text=preview_template or " ",
+                html_content=html_template,
+                tag_id=tag_id,
+                description=f"CCA test send for user {user.id}",
+            )
+            status = kit.wait_for_broadcast_delivery(broadcast_id)
+        except KitSubscriberStateError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except KitApiError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        finally:
+            if subscriber_id:
+                try:
+                    kit.remove_tag_from_subscriber(tag_id, subscriber_id)
+                except KitApiError:
+                    pass
+                try:
+                    kit.unsubscribe_subscriber(subscriber_id)
+                except KitApiError:
+                    pass
+            if broadcast_id:
+                try:
+                    kit.delete_broadcast(broadcast_id)
+                except KitApiError:
+                    pass
+        return {
+            "status": "success",
+            "message": f"Test email completed via Kit broadcast {status.broadcast_id}.",
+        }
+
     brevo = BrevoService(
-        resolved_settings.brevo_api_key,
+        resolved_settings.provider_api_key,
         resolved_settings.sender_email,
         resolved_settings.sender_name,
     )

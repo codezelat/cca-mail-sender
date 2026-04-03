@@ -25,6 +25,7 @@ class UserSettings(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id")
 
     brevo_api_key: Optional[str] = None
+    kit_api_key: Optional[str] = None
     sender_email: Optional[str] = None
     sender_name: Optional[str] = None
     use_env_brevo_api_key: bool = Field(default=False)

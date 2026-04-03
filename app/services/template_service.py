@@ -574,6 +574,48 @@ def build_render_payload(
     return payload
 
 
+def build_provider_payload(
+    payload: Optional[Dict[str, Any]],
+    user_id: Optional[int] = None,
+    email: Optional[str] = None,
+) -> Dict[str, Any]:
+    return build_render_payload(payload, user_id=user_id, email=email)
+
+
+def _kit_html_token_for_key(key: str) -> str:
+    if key == "email":
+        return "{{ subscriber.email_address }}"
+    if key == "first_name":
+        return '{{ subscriber.first_name | strip | default: "there" }}'
+    if key == "name":
+        return '{{ subscriber.name | strip | default: "there" }}'
+    return f"{{{{ subscriber.{key} }}}}"
+
+
+def _kit_subject_token_for_key(key: str) -> str:
+    if key == "email":
+        return "{{ subscriber.email_address }}"
+    if key == "first_name":
+        return "{{ subscriber.first_name }}"
+    if key == "name":
+        return "{{ subscriber.name }}"
+    return f"{{{{ subscriber.{key} }}}}"
+
+
+def convert_template_source_to_kit_liquid(source: str, html_mode: bool = True) -> str:
+    normalized = normalize_template_source(source or "")
+
+    def replace(match: re.Match[str]) -> str:
+        key = parse_token_expression(match.group(1))
+        if not key:
+            return match.group(0)
+        if html_mode:
+            return _kit_html_token_for_key(key)
+        return _kit_subject_token_for_key(key)
+
+    return TOKEN_RE.sub(replace, normalized)
+
+
 def render_template_html(
     compiled_html: str,
     payload: Optional[Dict[str, Any]],

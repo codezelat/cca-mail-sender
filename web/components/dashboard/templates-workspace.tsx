@@ -365,7 +365,7 @@ export function TemplatesWorkspace() {
           sample_data: previewData
         }
       });
-      pushToast("Test Email Sent", "Brevo accepted the test send.");
+      pushToast("Test Email Sent", "The active provider accepted the test send.");
     } catch (error) {
       pushToast("Test Send Failed", error instanceof Error ? error.message : "Request failed.", "error");
     }

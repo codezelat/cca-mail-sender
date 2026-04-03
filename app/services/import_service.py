@@ -18,7 +18,7 @@ from app.models import (
     ImportSession,
     User,
 )
-from app.queue_runtime import enqueue_recipient_delivery
+from app.queue_runtime import enqueue_batch_delivery, enqueue_recipient_delivery
 from app.services.settings_service import resolve_sender_settings
 from app.services.template_service import ensure_schema, render_template_version
 
@@ -522,7 +522,10 @@ def stage_batch(
         created_count=result["summary_counts"]["created"],
         updated_count=result["summary_counts"]["updated"],
         invalid_count=result["summary_counts"]["invalid_rows"],
-        launch_summary_json=result["summary_counts"],
+        launch_summary_json={
+            **result["summary_counts"],
+            "delivery_provider": effective_settings.provider,
+        },
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
     )
@@ -609,6 +612,7 @@ def stage_batch(
 
 
 def launch_batch(session: Session, batch: CampaignBatch) -> CampaignBatch:
+    provider = str((batch.launch_summary_json or {}).get("delivery_provider") or "brevo").lower()
     recipients = session.exec(
         select(CampaignRecipient).where(CampaignRecipient.batch_id == batch.id)
     ).all()
@@ -630,6 +634,10 @@ def launch_batch(session: Session, batch: CampaignBatch) -> CampaignBatch:
     session.add(batch)
     session.commit()
     session.refresh(batch)
+    if provider == "kit":
+        enqueue_batch_delivery(batch.id or 0)
+        return batch
+
     for recipient_id in queued_ids:
         enqueue_recipient_delivery(recipient_id)
     return batch

@@ -36,7 +36,12 @@ class AppSettings:
     public_base_url: str
     secure_cookies: bool
     queue_backend: str
+    email_provider: str
     brevo_smtp_api_key: str
+    kit_api_key: str
+    kit_email_template_id: int
+    kit_broadcast_poll_interval_seconds: int
+    kit_broadcast_timeout_seconds: int
     sender_email: str
     sender_name: str
 
@@ -46,6 +51,9 @@ def load_settings() -> AppSettings:
     public_base_url = os.getenv("PUBLIC_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
     redis_url = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
     queue_backend = os.getenv("QUEUE_BACKEND", "dramatiq").strip().lower()
+    email_provider = os.getenv("EMAIL_PROVIDER", "brevo").strip().lower() or "brevo"
+    if email_provider not in {"brevo", "kit"}:
+        email_provider = "brevo"
     return AppSettings(
         app_name=os.getenv("APP_NAME", "CCA Campaign Manager"),
         secret_key=os.getenv("SECRET_KEY", "supersecretkey"),
@@ -58,7 +66,16 @@ def load_settings() -> AppSettings:
         public_base_url=public_base_url,
         secure_cookies=_env_bool("SECURE_COOKIES", False),
         queue_backend=queue_backend,
+        email_provider=email_provider,
         brevo_smtp_api_key=os.getenv("BREVO_SMTP_API_KEY", "").strip(),
+        kit_api_key=os.getenv("KIT_API_KEY", "").strip(),
+        kit_email_template_id=_env_int("KIT_EMAIL_TEMPLATE_ID", 0),
+        kit_broadcast_poll_interval_seconds=_env_int(
+            "KIT_BROADCAST_POLL_INTERVAL_SECONDS", 5
+        ),
+        kit_broadcast_timeout_seconds=_env_int(
+            "KIT_BROADCAST_TIMEOUT_SECONDS", 300
+        ),
         sender_email=os.getenv("SENDER_EMAIL", "").strip(),
         sender_name=os.getenv("SENDER_NAME", "").strip(),
     )

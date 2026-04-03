@@ -33,3 +33,19 @@ def enqueue_recipient_delivery(recipient_id: int, delay_ms: int = 0) -> None:
     from app.services.delivery_service import process_recipient_delivery
 
     process_recipient_delivery(recipient_id)
+
+
+def enqueue_batch_delivery(batch_id: int, delay_ms: int = 0) -> None:
+    if settings.queue_backend == "dramatiq" and dramatiq is not None:
+        configure_broker()
+        from app.tasks import send_campaign_batch_task
+
+        if delay_ms:
+            send_campaign_batch_task.send_with_options(args=(batch_id,), delay=delay_ms)
+        else:
+            send_campaign_batch_task.send(batch_id)
+        return
+
+    from app.services.delivery_service import process_batch_delivery
+
+    process_batch_delivery(batch_id)

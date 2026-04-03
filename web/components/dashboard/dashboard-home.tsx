@@ -91,6 +91,13 @@ export function DashboardHome() {
       optional: fields.filter((field) => !field.required)
     };
   }, [selectedPublishedTemplate]);
+  const providerLabel =
+    settingsDraft?.provider === "kit"
+      ? "Kit"
+      : settingsDraft?.provider === "brevo"
+        ? "Brevo"
+        : "Provider";
+  const providerEnvKey = settingsDraft?.provider === "kit" ? "KIT_API_KEY" : "BREVO_SMTP_API_KEY";
 
   useEffect(() => {
     if (settingsQuery.data) {
@@ -278,12 +285,12 @@ export function DashboardHome() {
       [name]: nextValue
     };
 
-    if (name === "use_env_brevo_api_key" && nextValue === true) {
-      nextDraft.clear_manual_brevo_api_key = false;
-      nextDraft.brevo_api_key = "";
+    if (name === "use_env_provider_api_key" && nextValue === true) {
+      nextDraft.clear_manual_provider_api_key = false;
+      nextDraft.provider_api_key = "";
     }
-    if (name === "clear_manual_brevo_api_key" && nextValue === true) {
-      nextDraft.brevo_api_key = "";
+    if (name === "clear_manual_provider_api_key" && nextValue === true) {
+      nextDraft.provider_api_key = "";
     }
 
     setSettingsDraft(nextDraft);
@@ -786,48 +793,48 @@ export function DashboardHome() {
                   settingsMutation.mutate(settingsDraft);
                 }}
               >
-                {settingsDraft.env_has_brevo_api_key || settingsDraft.env_has_sender_identity ? (
+                {settingsDraft.env_has_provider_api_key || settingsDraft.env_has_sender_identity ? (
                   <div className="rounded-xl border border-sky-400/15 bg-sky-400/10 px-3 py-2 text-xs text-sky-100">
                     Server `.env` defaults are available. You can use them directly without pasting secrets into the dashboard.
                   </div>
                 ) : null}
                 <div>
-                  <label className="mb-1 block text-xs text-gray-500">Brevo API Key</label>
-                  {settingsDraft.env_has_brevo_api_key ? (
+                  <label className="mb-1 block text-xs text-gray-500">{providerLabel} API Key</label>
+                  {settingsDraft.env_has_provider_api_key ? (
                     <label className="mb-2 flex items-center gap-2 text-xs text-gray-300">
                       <input
-                        name="use_env_brevo_api_key"
+                        name="use_env_provider_api_key"
                         type="checkbox"
-                        checked={settingsDraft.use_env_brevo_api_key}
+                        checked={settingsDraft.use_env_provider_api_key}
                         onChange={onSettingsChange}
                       />
-                      Use `BREVO_SMTP_API_KEY` from `.env`
+                      {`Use ${providerEnvKey} from .env`}
                     </label>
                   ) : null}
                   <input
                     type="password"
-                    name="brevo_api_key"
+                    name="provider_api_key"
                     className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-purple-500"
                     placeholder={
-                      settingsDraft.use_env_brevo_api_key
-                        ? "Using BREVO_SMTP_API_KEY from .env"
-                        : settingsDraft.has_manual_brevo_api_key
-                          ? "Leave blank to keep the saved Brevo key"
-                          : "Brevo API Key"
+                      settingsDraft.use_env_provider_api_key
+                        ? `Using ${providerEnvKey} from .env`
+                        : settingsDraft.has_manual_provider_api_key
+                          ? `Leave blank to keep the saved ${providerLabel} key`
+                          : `${providerLabel} API Key`
                     }
-                    value={settingsDraft.brevo_api_key || ""}
+                    value={settingsDraft.provider_api_key || ""}
                     onChange={onSettingsChange}
-                    disabled={settingsDraft.use_env_brevo_api_key}
+                    disabled={settingsDraft.use_env_provider_api_key}
                   />
-                  {!settingsDraft.use_env_brevo_api_key && settingsDraft.has_manual_brevo_api_key ? (
+                  {!settingsDraft.use_env_provider_api_key && settingsDraft.has_manual_provider_api_key ? (
                     <label className="mt-2 flex items-center gap-2 text-xs text-gray-400">
                       <input
-                        name="clear_manual_brevo_api_key"
+                        name="clear_manual_provider_api_key"
                         type="checkbox"
-                        checked={Boolean(settingsDraft.clear_manual_brevo_api_key)}
+                        checked={Boolean(settingsDraft.clear_manual_provider_api_key)}
                         onChange={onSettingsChange}
                       />
-                      Remove the saved manual Brevo key on next save
+                      Remove the saved manual {providerLabel} key on next save
                     </label>
                   ) : null}
                 </div>

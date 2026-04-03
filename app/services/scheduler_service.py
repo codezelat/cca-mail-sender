@@ -42,7 +42,11 @@ class SchedulerService:
                     users = session.exec(select(User)).all()
                     for user in users:
                         effective_settings = resolve_sender_settings(user.settings)
-                        if not user.settings or not effective_settings.brevo_api_key:
+                        if (
+                            not user.settings
+                            or effective_settings.provider != "brevo"
+                            or not effective_settings.provider_api_key
+                        ):
                             continue
 
                         self._refresh_windows(session, user)
@@ -181,7 +185,7 @@ class SchedulerService:
             return
 
         brevo = BrevoService(
-            effective_settings.brevo_api_key,
+            effective_settings.provider_api_key,
             batch.sender_email_snapshot or effective_settings.sender_email,
             batch.sender_name_snapshot or effective_settings.sender_name,
         )

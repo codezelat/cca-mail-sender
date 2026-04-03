@@ -111,16 +111,17 @@ export type ContactRecord = {
 };
 
 export type SettingsRecord = {
-  brevo_api_key?: string;
+  provider: "brevo" | "kit";
+  provider_api_key?: string;
   sender_email?: string;
   sender_name?: string;
-  use_env_brevo_api_key: boolean;
+  use_env_provider_api_key: boolean;
   use_env_sender_identity: boolean;
-  clear_manual_brevo_api_key?: boolean;
-  has_manual_brevo_api_key: boolean;
-  env_has_brevo_api_key: boolean;
+  clear_manual_provider_api_key?: boolean;
+  has_manual_provider_api_key: boolean;
+  env_has_provider_api_key: boolean;
   env_has_sender_identity: boolean;
-  effective_brevo_api_key_configured: boolean;
+  effective_provider_api_key_configured: boolean;
   effective_sender_email?: string;
   effective_sender_name?: string;
   hourly_limit: number;

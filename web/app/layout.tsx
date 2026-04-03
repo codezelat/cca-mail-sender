@@ -14,7 +14,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "CCA Campaign Manager",
-  description: "Production email campaign manager for Brevo.",
+  description: "Production email campaign manager for Brevo and Kit.",
   icons: {
     icon: "/logo.png"
   }

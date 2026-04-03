@@ -63,8 +63,9 @@ export default function LandingPage() {
             <span className="text-slate-500">without the limits.</span>
           </h1>
           <p className="mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-slate-400 md:text-xl">
-            The open-source email manager for Brevo. Handle rate limits, manage multiple
-            users, and visualize your growth with a premium, persistent dashboard.
+            The open-source email manager for Brevo and Kit. Handle rate limits,
+            manage multiple users, and visualize your growth with a premium,
+            persistent dashboard.
           </p>
           <div className="mb-24 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link

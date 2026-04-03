@@ -16,9 +16,20 @@ if dramatiq is not None:
 
         process_recipient_delivery(recipient_id)
 
+    @dramatiq.actor(max_retries=3, min_backoff=60_000)
+    def send_campaign_batch_task(batch_id: int) -> None:
+        from app.services.delivery_service import process_batch_delivery
+
+        process_batch_delivery(batch_id)
+
 else:
 
     def send_campaign_recipient_task(recipient_id: int) -> None:
         from app.services.delivery_service import process_recipient_delivery
 
         process_recipient_delivery(recipient_id)
+
+    def send_campaign_batch_task(batch_id: int) -> None:
+        from app.services.delivery_service import process_batch_delivery
+
+        process_batch_delivery(batch_id)
