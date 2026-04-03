@@ -22,8 +22,8 @@ from .models import (  # noqa: F401
 )
 
 DATA_DIR = "data"
-sqlite_file_name = os.path.join(DATA_DIR, "app.db")
-sqlite_url = f"sqlite:///{sqlite_file_name}"
+default_sqlite_file_name = os.path.join(DATA_DIR, "app.db")
+sqlite_url = f"sqlite:///{default_sqlite_file_name}"
 database_url = settings.database_url or sqlite_url
 
 connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
@@ -32,6 +32,7 @@ engine = create_engine(
     connect_args=connect_args,
     pool_pre_ping=not database_url.startswith("sqlite"),
 )
+sqlite_file_name = engine.url.database or default_sqlite_file_name
 
 
 def _table_columns(conn: sqlite3.Connection, table_name: str) -> set[str]:

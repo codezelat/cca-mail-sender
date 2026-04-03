@@ -1,4 +1,5 @@
 import asyncio
+import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -7,6 +8,7 @@ from app.config import AppSettings
 from sqlmodel import Session, SQLModel, create_engine
 
 from app.auth import _hash_value
+from app import database as database_module
 from app.models import Contact, EmailTemplate, EmailTemplateVersion, ImportSession, User, UserSettings
 from app.models import UserSession
 from app.routers.auth_routes import logout_v1
@@ -55,6 +57,30 @@ def test_builder_render_escapes_dynamic_tokens():
 
     assert "&lt;script&gt;alert(1)&lt;/script&gt;" in rendered
     assert "<script>alert(1)</script>" not in rendered
+
+
+def test_create_db_and_tables_supports_custom_sqlite_path(tmp_path: Path, monkeypatch):
+    db_path = tmp_path / "custom.sqlite3"
+    engine = create_engine(
+        f"sqlite:///{db_path}",
+        connect_args={"check_same_thread": False},
+    )
+    monkeypatch.setattr(database_module, "engine", engine)
+    monkeypatch.setattr(database_module, "database_url", f"sqlite:///{db_path}")
+    monkeypatch.setattr(database_module, "sqlite_file_name", str(db_path))
+
+    database_module.create_db_and_tables()
+
+    with sqlite3.connect(db_path) as conn:
+        tables = {
+            row[0]
+            for row in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+        }
+
+    assert "contact" in tables
+    assert "user" in tables
 
 
 def test_schema_extraction_normalizes_unsubscribe_alias():
