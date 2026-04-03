@@ -15,6 +15,7 @@ from app.routers.auth_routes import logout_v1
 from app.services.import_service import evaluate_import_session
 from app.services import settings_service
 from app.services.template_service import (
+    convert_template_source_to_kit_liquid,
     ensure_schema,
     render_template_html,
     schema_from_source,
@@ -92,6 +93,21 @@ def test_schema_extraction_normalizes_unsubscribe_alias():
     assert "unsubscribe_url" in keys
     assert "company_name" in keys
     assert "unsubscribe" not in keys
+
+
+def test_convert_template_source_to_kit_liquid_strips_app_unsubscribe_footer():
+    source = """
+    <div>
+      <p>Hello {{ name }}</p>
+      <p><a href="{{ unsubscribe_url }}" style="color:#64748b;">Unsubscribe</a></p>
+    </div>
+    """
+
+    converted = convert_template_source_to_kit_liquid(source, html_mode=True)
+
+    assert "{{ subscriber.name" in converted
+    assert "{{ unsubscribe_url }}" not in converted
+    assert ">Unsubscribe<" not in converted
 
 
 def test_import_validation_reports_duplicates_and_missing_required_fields(tmp_path: Path):

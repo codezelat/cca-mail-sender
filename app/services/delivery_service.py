@@ -344,7 +344,7 @@ def process_batch_delivery(batch_id: int) -> None:
             labels_by_key = {
                 field["key"]: field["label"]
                 for field in schema
-                if field["key"] not in {"email", "first_name"}
+                if field["key"] not in {"email", "first_name", "unsubscribe_url"}
             }
             field_labels = kit.ensure_custom_fields(labels_by_key)
 

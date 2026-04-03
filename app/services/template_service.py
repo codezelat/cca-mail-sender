@@ -24,6 +24,10 @@ from app.models import (
 
 TOKEN_RE = re.compile(r"\{\{\s*(.*?)\s*\}\}")
 FIELD_KEY_RE = re.compile(r"^[a-z_][a-z0-9_]*$")
+KIT_APP_UNSUBSCRIBE_WRAPPER_RE = re.compile(
+    r"<(?P<tag>div|p)[^>]*>\s*<a\b[^>]*href=(['\"])\s*\{\{\s*unsubscribe_url\s*\}\}\s*\2[^>]*>.*?</a>\s*</(?P=tag)>",
+    re.IGNORECASE | re.DOTALL,
+)
 
 DEFAULT_TEMPLATE_NAME = "CCA Default"
 DEFAULT_TEMPLATE_SUBJECT = "Campaign Update"
@@ -602,8 +606,14 @@ def _kit_subject_token_for_key(key: str) -> str:
     return f"{{{{ subscriber.{key} }}}}"
 
 
+def _strip_app_unsubscribe_markup_for_kit(source: str) -> str:
+    return KIT_APP_UNSUBSCRIBE_WRAPPER_RE.sub("", source)
+
+
 def convert_template_source_to_kit_liquid(source: str, html_mode: bool = True) -> str:
     normalized = normalize_template_source(source or "")
+    if html_mode:
+        normalized = _strip_app_unsubscribe_markup_for_kit(normalized)
 
     def replace(match: re.Match[str]) -> str:
         key = parse_token_expression(match.group(1))
