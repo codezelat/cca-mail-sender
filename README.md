@@ -527,6 +527,39 @@ Check:
 
 ## 🧭 Recommended Commands
 
+If you prefer a single command surface, use the Makefile targets below.
+
+### One-command production-like local run
+
+```bash
+make stack-up
+```
+
+Then verify health and inspect logs:
+
+```bash
+make health
+make stack-logs
+```
+
+Stop everything:
+
+```bash
+make stack-down
+```
+
+### One-command verification gates
+
+```bash
+make audit
+```
+
+Optional dependency scan:
+
+```bash
+make audit-security
+```
+
 ### Full stack
 
 ```bash
