@@ -23,7 +23,7 @@ function formatDate(value?: string | null) {
     month: "short",
     day: "2-digit",
     hour: "2-digit",
-    minute: "2-digit"
+    minute: "2-digit",
   });
 }
 
@@ -38,7 +38,10 @@ export function ContactsWorkspace() {
 
   const contactsQuery = useQuery({
     queryKey: ["contacts-workspace", search],
-    queryFn: () => apiFetch<ContactsResponse>(`/api/v1/contacts?search=${encodeURIComponent(search)}`)
+    queryFn: () =>
+      apiFetch<ContactsResponse>(
+        `/api/v1/contacts?search=${encodeURIComponent(search)}`,
+      ),
   });
 
   const saveMutation = useMutation({
@@ -49,8 +52,8 @@ export function ContactsWorkspace() {
           name: contact.name,
           email: contact.email,
           custom_fields_json: contact.custom_fields_json,
-          unsubscribed: contact.unsubscribed
-        }
+          unsubscribed: contact.unsubscribed,
+        },
       }),
     onSuccess: async () => {
       pushToast("Contact Saved", "The contact record was updated.");
@@ -58,38 +61,50 @@ export function ContactsWorkspace() {
       await queryClient.invalidateQueries({ queryKey: ["contacts-workspace"] });
     },
     onError: (error) => {
-      pushToast("Save Failed", error instanceof Error ? error.message : "Request failed.", "error");
-    }
+      pushToast(
+        "Save Failed",
+        error instanceof Error ? error.message : "Request failed.",
+        "error",
+      );
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (contactId: number) =>
       apiFetch(`/api/v1/contacts/${contactId}`, {
         method: "DELETE",
-        bodyJson: {}
+        bodyJson: {},
       }),
     onSuccess: async () => {
       pushToast("Contact Deleted", "The contact was removed.");
       await queryClient.invalidateQueries({ queryKey: ["contacts-workspace"] });
     },
     onError: (error) => {
-      pushToast("Delete Failed", error instanceof Error ? error.message : "Request failed.", "error");
-    }
+      pushToast(
+        "Delete Failed",
+        error instanceof Error ? error.message : "Request failed.",
+        "error",
+      );
+    },
   });
 
   const deleteAllMutation = useMutation({
     mutationFn: () =>
       apiFetch("/api/v1/contacts", {
         method: "DELETE",
-        bodyJson: {}
+        bodyJson: {},
       }),
     onSuccess: async () => {
       pushToast("Contacts Deleted", "All contacts were removed.");
       await queryClient.invalidateQueries({ queryKey: ["contacts-workspace"] });
     },
     onError: (error) => {
-      pushToast("Delete Failed", error instanceof Error ? error.message : "Request failed.", "error");
-    }
+      pushToast(
+        "Delete Failed",
+        error instanceof Error ? error.message : "Request failed.",
+        "error",
+      );
+    },
   });
 
   useEffect(() => {
@@ -100,15 +115,15 @@ export function ContactsWorkspace() {
   }, [searchDraft]);
 
   return (
-    <section className="view-panel">
-      <div className="bento-card p-6 md:p-8">
+    <section className="view-panel min-w-0">
+      <div className="bento-card min-w-0 p-6 md:p-8">
         <div className="relative z-10 mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="bg-gradient-to-r from-white to-gray-400 bg-clip-text text-xl font-semibold text-transparent">
               Address Book
             </h2>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="min-w-0 flex flex-wrap items-center gap-3">
             <input
               type="text"
               placeholder="Search contacts..."
@@ -128,7 +143,7 @@ export function ContactsWorkspace() {
               onClick={async () => {
                 const approved = await confirm({
                   title: "Delete All Contacts",
-                  message: "Delete all contacts? This cannot be undone."
+                  message: "Delete all contacts? This cannot be undone.",
                 });
                 if (approved) {
                   deleteAllMutation.mutate();
@@ -156,21 +171,45 @@ export function ContactsWorkspace() {
               {(contactsQuery.data?.contacts || []).map((contact) => (
                 <tr key={contact.id}>
                   <td className="px-5 py-4">
-                    <div className="font-medium text-white">{contact.name || "There"}</div>
-                    <div className="mt-1 text-xs text-gray-500">{contact.email}</div>
+                    <div
+                      className="max-w-[12rem] truncate font-medium text-white"
+                      title={contact.name || "There"}
+                    >
+                      {contact.name || "There"}
+                    </div>
+                    <div
+                      className="mt-1 max-w-[16rem] truncate text-xs text-gray-500"
+                      title={contact.email}
+                    >
+                      {contact.email}
+                    </div>
                   </td>
                   <td className="px-5 py-4">
                     <StatusBadge
-                      value={contact.unsubscribed ? "unsubscribed" : contact.last_delivery_status || "subscribed"}
+                      value={
+                        contact.unsubscribed
+                          ? "unsubscribed"
+                          : contact.last_delivery_status || "subscribed"
+                      }
                     />
                   </td>
                   <td className="px-5 py-4 text-gray-400">
-                    <div>{Object.keys(contact.custom_fields_json || {}).length} fields</div>
+                    <div>
+                      {Object.keys(contact.custom_fields_json || {}).length}{" "}
+                      fields
+                    </div>
                   </td>
                   <td className="px-5 py-4 text-gray-400">
                     <div>{contact.last_delivery_status || "—"}</div>
-                    <div className="mt-1 text-xs text-gray-500">
-                      {contact.last_delivery_error || formatDate(contact.updated_at)}
+                    <div
+                      className="mt-1 max-w-[16rem] truncate text-xs text-gray-500"
+                      title={
+                        contact.last_delivery_error ||
+                        formatDate(contact.updated_at)
+                      }
+                    >
+                      {contact.last_delivery_error ||
+                        formatDate(contact.updated_at)}
                     </div>
                   </td>
                   <td className="px-5 py-4 text-right">
@@ -179,7 +218,13 @@ export function ContactsWorkspace() {
                         type="button"
                         onClick={() => {
                           setEditing(contact);
-                          setCustomFieldsDraft(JSON.stringify(contact.custom_fields_json || {}, null, 2));
+                          setCustomFieldsDraft(
+                            JSON.stringify(
+                              contact.custom_fields_json || {},
+                              null,
+                              2,
+                            ),
+                          );
                         }}
                         className="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-white/10"
                       >
@@ -190,7 +235,7 @@ export function ContactsWorkspace() {
                         onClick={async () => {
                           const approved = await confirm({
                             title: "Delete Contact",
-                            message: "Delete this contact?"
+                            message: "Delete this contact?",
                           });
                           if (approved) {
                             deleteMutation.mutate(contact.id);
@@ -206,7 +251,10 @@ export function ContactsWorkspace() {
               ))}
               {!contactsQuery.data?.contacts?.length ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-gray-500">
+                  <td
+                    colSpan={5}
+                    className="px-5 py-8 text-center text-gray-500"
+                  >
                     No contacts found.
                   </td>
                 </tr>
@@ -221,9 +269,23 @@ export function ContactsWorkspace() {
           <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0a0a0a] p-6 shadow-2xl">
             <div className="mb-6 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-white">Edit Contact</h3>
-              <button type="button" onClick={() => setEditing(null)} className="text-gray-500 transition hover:text-white">
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              <button
+                type="button"
+                onClick={() => setEditing(null)}
+                className="text-gray-500 transition hover:text-white"
+              >
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -233,21 +295,29 @@ export function ContactsWorkspace() {
                 <input
                   type="text"
                   value={editing.name || ""}
-                  onChange={(event) => setEditing({ ...editing, name: event.target.value })}
+                  onChange={(event) =>
+                    setEditing({ ...editing, name: event.target.value })
+                  }
                   className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-purple-500"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs text-gray-500">Email</label>
+                <label className="mb-1 block text-xs text-gray-500">
+                  Email
+                </label>
                 <input
                   type="email"
                   value={editing.email || ""}
-                  onChange={(event) => setEditing({ ...editing, email: event.target.value })}
+                  onChange={(event) =>
+                    setEditing({ ...editing, email: event.target.value })
+                  }
                   className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-purple-500"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs text-gray-500">Custom Fields (JSON)</label>
+                <label className="mb-1 block text-xs text-gray-500">
+                  Custom Fields (JSON)
+                </label>
                 <textarea
                   spellCheck="false"
                   value={customFieldsDraft}
@@ -259,7 +329,12 @@ export function ContactsWorkspace() {
                 <input
                   type="checkbox"
                   checked={editing.unsubscribed}
-                  onChange={(event) => setEditing({ ...editing, unsubscribed: event.target.checked })}
+                  onChange={(event) =>
+                    setEditing({
+                      ...editing,
+                      unsubscribed: event.target.checked,
+                    })
+                  }
                   className="h-4 w-4 rounded border-white/10 bg-black/50 accent-purple-500"
                 />
                 Unsubscribed status
@@ -271,10 +346,14 @@ export function ContactsWorkspace() {
                   try {
                     saveMutation.mutate({
                       ...editing,
-                      custom_fields_json: JSON.parse(customFieldsDraft || "{}")
+                      custom_fields_json: JSON.parse(customFieldsDraft || "{}"),
                     });
                   } catch {
-                    pushToast("Invalid JSON", "Custom fields must be valid JSON.", "error");
+                    pushToast(
+                      "Invalid JSON",
+                      "Custom fields must be valid JSON.",
+                      "error",
+                    );
                   }
                 }}
                 className="mt-4 w-full rounded-full bg-white py-2 text-sm font-semibold text-black transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"

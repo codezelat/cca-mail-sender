@@ -8,7 +8,11 @@ import { useToast } from "@/components/providers/toast-provider";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { API_BASE_URL, apiFetch, buildUploadForm } from "@/lib/api";
 import { BLOCK_FIELD_CONFIG, createBuilderBlock } from "@/lib/template-builder";
-import type { TemplateField, TemplateSummary, TemplateVersion } from "@/lib/types";
+import type {
+  TemplateField,
+  TemplateSummary,
+  TemplateVersion,
+} from "@/lib/types";
 
 type AssetResponse = {
   enabled: boolean;
@@ -26,7 +30,17 @@ type DraftState = {
   merge_fields_schema: TemplateField[];
 };
 
-const BLOCK_TYPES = ["section", "columns", "text", "image", "button", "spacer", "divider", "social_footer", "raw_html"];
+const BLOCK_TYPES = [
+  "section",
+  "columns",
+  "text",
+  "image",
+  "button",
+  "spacer",
+  "divider",
+  "social_footer",
+  "raw_html",
+];
 
 function cloneDraft(template: TemplateSummary): DraftState {
   const draft = template.draft_version || template.published_version;
@@ -35,9 +49,13 @@ function cloneDraft(template: TemplateSummary): DraftState {
     editor_mode: draft?.editor_mode || template.editor_mode,
     subject: draft?.subject || "",
     preheader: draft?.preheader || "",
-    design_json: JSON.parse(JSON.stringify(draft?.design_json || { blocks: [] })),
+    design_json: JSON.parse(
+      JSON.stringify(draft?.design_json || { blocks: [] }),
+    ),
     html_source: draft?.html_source || "",
-    merge_fields_schema: JSON.parse(JSON.stringify(draft?.merge_fields_schema || []))
+    merge_fields_schema: JSON.parse(
+      JSON.stringify(draft?.merge_fields_schema || []),
+    ),
   };
 }
 
@@ -58,7 +76,7 @@ function createCustomField(existingFields: TemplateField[]) {
     default_value: "",
     sample_value: "",
     description: "",
-    builtin: false
+    builtin: false,
   };
 }
 
@@ -66,10 +84,14 @@ export function TemplatesWorkspace() {
   const queryClient = useQueryClient();
   const { pushToast } = useToast();
   const { confirm, prompt } = useDialog();
-  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(
+    null,
+  );
   const [draftState, setDraftState] = useState<DraftState | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"design" | "code" | "preview" | "settings">("design");
+  const [activeTab, setActiveTab] = useState<
+    "design" | "code" | "preview" | "settings"
+  >("design");
   const [previewHtml, setPreviewHtml] = useState("");
   const [previewSubject, setPreviewSubject] = useState("");
   const [previewData, setPreviewData] = useState<Record<string, string>>({});
@@ -80,18 +102,22 @@ export function TemplatesWorkspace() {
 
   const templatesQuery = useQuery({
     queryKey: ["templates-workspace-list"],
-    queryFn: () => apiFetch<{ templates: TemplateSummary[] }>("/api/v1/templates")
+    queryFn: () =>
+      apiFetch<{ templates: TemplateSummary[] }>("/api/v1/templates"),
   });
 
   const detailQuery = useQuery({
     queryKey: ["template-detail", selectedTemplateId],
-    queryFn: () => apiFetch<{ template: TemplateSummary }>(`/api/v1/templates/${selectedTemplateId}`),
-    enabled: Boolean(selectedTemplateId)
+    queryFn: () =>
+      apiFetch<{ template: TemplateSummary }>(
+        `/api/v1/templates/${selectedTemplateId}`,
+      ),
+    enabled: Boolean(selectedTemplateId),
   });
 
   const assetsQuery = useQuery({
     queryKey: ["template-assets"],
-    queryFn: () => apiFetch<AssetResponse>("/api/v1/template-assets")
+    queryFn: () => apiFetch<AssetResponse>("/api/v1/template-assets"),
   });
 
   useEffect(() => {
@@ -110,47 +136,77 @@ export function TemplatesWorkspace() {
       Object.fromEntries(
         (nextDraft.merge_fields_schema || [])
           .filter((field) => field.key !== "unsubscribe_url")
-          .map((field) => [field.key, field.sample_value || field.default_value || ""])
-      )
+          .map((field) => [
+            field.key,
+            field.sample_value || field.default_value || "",
+          ]),
+      ),
     );
     setActiveTab(nextDraft.editor_mode === "code" ? "code" : "design");
-    setPreviewHtml(detailQuery.data.template.draft_version?.compiled_html || detailQuery.data.template.published_version?.compiled_html || "");
-    setPreviewSubject(detailQuery.data.template.draft_version?.subject || detailQuery.data.template.published_version?.subject || "");
+    setPreviewHtml(
+      detailQuery.data.template.draft_version?.compiled_html ||
+        detailQuery.data.template.published_version?.compiled_html ||
+        "",
+    );
+    setPreviewSubject(
+      detailQuery.data.template.draft_version?.subject ||
+        detailQuery.data.template.published_version?.subject ||
+        "",
+    );
   }, [detailQuery.data]);
 
   const saveMutation = useMutation({
     mutationFn: (payload: DraftState) =>
-      apiFetch<{ template: TemplateSummary }>(`/api/v1/templates/${selectedTemplateId}/draft`, {
-        method: "PUT",
-        bodyJson: payload
-      }),
+      apiFetch<{ template: TemplateSummary }>(
+        `/api/v1/templates/${selectedTemplateId}/draft`,
+        {
+          method: "PUT",
+          bodyJson: payload,
+        },
+      ),
     onSuccess: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["templates-workspace-list"] }),
-        queryClient.invalidateQueries({ queryKey: ["template-detail", selectedTemplateId] })
+        queryClient.invalidateQueries({
+          queryKey: ["templates-workspace-list"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["template-detail", selectedTemplateId],
+        }),
       ]);
     },
     onError: (error) => {
-      pushToast("Save Failed", error instanceof Error ? error.message : "Request failed.", "error");
-    }
+      pushToast(
+        "Save Failed",
+        error instanceof Error ? error.message : "Request failed.",
+        "error",
+      );
+    },
   });
 
   const publishMutation = useMutation({
     mutationFn: () =>
       apiFetch(`/api/v1/templates/${selectedTemplateId}/publish`, {
         method: "POST",
-        bodyJson: {}
+        bodyJson: {},
       }),
     onSuccess: async () => {
       pushToast("Template Published", "The template is now live.");
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["templates-workspace-list"] }),
-        queryClient.invalidateQueries({ queryKey: ["template-detail", selectedTemplateId] })
+        queryClient.invalidateQueries({
+          queryKey: ["templates-workspace-list"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["template-detail", selectedTemplateId],
+        }),
       ]);
     },
     onError: (error) => {
-      pushToast("Publish Failed", error instanceof Error ? error.message : "Request failed.", "error");
-    }
+      pushToast(
+        "Publish Failed",
+        error instanceof Error ? error.message : "Request failed.",
+        "error",
+      );
+    },
   });
 
   const selectedTemplate = detailQuery.data?.template || null;
@@ -160,7 +216,8 @@ export function TemplatesWorkspace() {
     (publishedVersion as TemplateVersion | null) ||
     null;
   const blocks = draftState ? ensureBlocks(draftState) : [];
-  const selectedBlock = blocks.find((block) => String(block.id) === selectedBlockId) || null;
+  const selectedBlock =
+    blocks.find((block) => String(block.id) === selectedBlockId) || null;
 
   async function saveDraft(options?: { silent?: boolean }) {
     if (!draftState) return;
@@ -184,35 +241,49 @@ export function TemplatesWorkspace() {
         `/api/v1/templates/${selectedTemplateId}/preview`,
         {
           method: "POST",
-          bodyJson: { sample_data: previewData }
-        }
+          bodyJson: { sample_data: previewData },
+        },
       );
       setPreviewHtml(data.html);
       setPreviewSubject(data.subject);
       setActiveTab("preview");
     } catch (error) {
-      pushToast("Preview Failed", error instanceof Error ? error.message : "Request failed.", "error");
+      pushToast(
+        "Preview Failed",
+        error instanceof Error ? error.message : "Request failed.",
+        "error",
+      );
     }
   }
 
   async function createTemplate(editorMode: "builder" | "code") {
-    const defaultName = editorMode === "builder" ? "New Builder Template" : "New Code Template";
+    const defaultName =
+      editorMode === "builder" ? "New Builder Template" : "New Code Template";
     const name = await prompt({
       title: "New Template",
       message: "Template name",
-      defaultValue: defaultName
+      defaultValue: defaultName,
     });
     if (!name?.trim()) return;
     try {
-      const data = await apiFetch<{ template: TemplateSummary }>("/api/v1/templates", {
-        method: "POST",
-        bodyJson: { name: name.trim(), editor_mode: editorMode }
-      });
+      const data = await apiFetch<{ template: TemplateSummary }>(
+        "/api/v1/templates",
+        {
+          method: "POST",
+          bodyJson: { name: name.trim(), editor_mode: editorMode },
+        },
+      );
       pushToast("Template Created", `${name.trim()} is ready to edit.`);
-      await queryClient.invalidateQueries({ queryKey: ["templates-workspace-list"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["templates-workspace-list"],
+      });
       setSelectedTemplateId(data.template.id);
     } catch (error) {
-      pushToast("Create Failed", error instanceof Error ? error.message : "Request failed.", "error");
+      pushToast(
+        "Create Failed",
+        error instanceof Error ? error.message : "Request failed.",
+        "error",
+      );
     }
   }
 
@@ -225,18 +296,30 @@ export function TemplatesWorkspace() {
       const formData = buildUploadForm({
         name: htmlImportFile.name.replace(/\.html$/i, ""),
         make_default: false,
-        file: htmlImportFile
+        file: htmlImportFile,
       });
-      const data = await apiFetch<{ template: TemplateSummary }>("/api/v1/templates/import-html", {
-        method: "POST",
-        body: formData
-      });
-      pushToast("Template Imported", `${data.template.name} was imported in code mode.`);
+      const data = await apiFetch<{ template: TemplateSummary }>(
+        "/api/v1/templates/import-html",
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
+      pushToast(
+        "Template Imported",
+        `${data.template.name} was imported in code mode.`,
+      );
       setHtmlImportFile(null);
-      await queryClient.invalidateQueries({ queryKey: ["templates-workspace-list"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["templates-workspace-list"],
+      });
       setSelectedTemplateId(data.template.id);
     } catch (error) {
-      pushToast("Import Failed", error instanceof Error ? error.message : "Request failed.", "error");
+      pushToast(
+        "Import Failed",
+        error instanceof Error ? error.message : "Request failed.",
+        "error",
+      );
     }
   }
 
@@ -245,7 +328,7 @@ export function TemplatesWorkspace() {
     const name = await prompt({
       title: "Rename template",
       message: "Enter new name:",
-      defaultValue: draftState.name
+      defaultValue: draftState.name,
     });
     if (!name?.trim()) return;
     const nextDraft = { ...draftState, name: name.trim() };
@@ -261,15 +344,24 @@ export function TemplatesWorkspace() {
   async function duplicateTemplate() {
     if (!selectedTemplateId) return;
     try {
-      const data = await apiFetch<{ template: TemplateSummary }>(`/api/v1/templates/${selectedTemplateId}/duplicate`, {
-        method: "POST",
-        bodyJson: {}
-      });
+      const data = await apiFetch<{ template: TemplateSummary }>(
+        `/api/v1/templates/${selectedTemplateId}/duplicate`,
+        {
+          method: "POST",
+          bodyJson: {},
+        },
+      );
       pushToast("Template Duplicated", `${data.template.name} was created.`);
-      await queryClient.invalidateQueries({ queryKey: ["templates-workspace-list"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["templates-workspace-list"],
+      });
       setSelectedTemplateId(data.template.id);
     } catch (error) {
-      pushToast("Duplicate Failed", error instanceof Error ? error.message : "Request failed.", "error");
+      pushToast(
+        "Duplicate Failed",
+        error instanceof Error ? error.message : "Request failed.",
+        "error",
+      );
     }
   }
 
@@ -278,18 +370,28 @@ export function TemplatesWorkspace() {
     try {
       await apiFetch(`/api/v1/templates/${selectedTemplateId}/archive`, {
         method: "POST",
-        bodyJson: { is_archived: !selectedTemplate.is_archived }
+        bodyJson: { is_archived: !selectedTemplate.is_archived },
       });
       pushToast(
-        selectedTemplate.is_archived ? "Template Restored" : "Template Archived",
-        selectedTemplate.name
+        selectedTemplate.is_archived
+          ? "Template Restored"
+          : "Template Archived",
+        selectedTemplate.name,
       );
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["templates-workspace-list"] }),
-        queryClient.invalidateQueries({ queryKey: ["template-detail", selectedTemplateId] })
+        queryClient.invalidateQueries({
+          queryKey: ["templates-workspace-list"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["template-detail", selectedTemplateId],
+        }),
       ]);
     } catch (error) {
-      pushToast("Archive Failed", error instanceof Error ? error.message : "Request failed.", "error");
+      pushToast(
+        "Archive Failed",
+        error instanceof Error ? error.message : "Request failed.",
+        "error",
+      );
     }
   }
 
@@ -298,12 +400,21 @@ export function TemplatesWorkspace() {
     try {
       await apiFetch(`/api/v1/templates/${selectedTemplateId}/default`, {
         method: "POST",
-        bodyJson: {}
+        bodyJson: {},
       });
-      pushToast("Default Template Updated", "This template will be preselected for campaigns.");
-      await queryClient.invalidateQueries({ queryKey: ["templates-workspace-list"] });
+      pushToast(
+        "Default Template Updated",
+        "This template will be preselected for campaigns.",
+      );
+      await queryClient.invalidateQueries({
+        queryKey: ["templates-workspace-list"],
+      });
     } catch (error) {
-      pushToast("Update Failed", error instanceof Error ? error.message : "Request failed.", "error");
+      pushToast(
+        "Update Failed",
+        error instanceof Error ? error.message : "Request failed.",
+        "error",
+      );
     }
   }
 
@@ -311,7 +422,7 @@ export function TemplatesWorkspace() {
     if (!selectedTemplateId) return;
     const approved = await confirm({
       title: "Delete Template",
-      message: "Delete this template? This cannot be undone."
+      message: "Delete this template? This cannot be undone.",
     });
     if (!approved) {
       return;
@@ -319,14 +430,20 @@ export function TemplatesWorkspace() {
     try {
       await apiFetch(`/api/v1/templates/${selectedTemplateId}`, {
         method: "DELETE",
-        bodyJson: {}
+        bodyJson: {},
       });
       pushToast("Template Deleted", "The template was removed.");
       setSelectedTemplateId(null);
       setDraftState(null);
-      await queryClient.invalidateQueries({ queryKey: ["templates-workspace-list"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["templates-workspace-list"],
+      });
     } catch (error) {
-      pushToast("Delete Failed", error instanceof Error ? error.message : "Request failed.", "error");
+      pushToast(
+        "Delete Failed",
+        error instanceof Error ? error.message : "Request failed.",
+        "error",
+      );
     }
   }
 
@@ -339,19 +456,27 @@ export function TemplatesWorkspace() {
       const formData = buildUploadForm({ file: assetFile });
       await apiFetch("/api/v1/template-assets/upload", {
         method: "POST",
-        body: formData
+        body: formData,
       });
       pushToast("Asset Uploaded", assetFile.name);
       setAssetFile(null);
       await queryClient.invalidateQueries({ queryKey: ["template-assets"] });
     } catch (error) {
-      pushToast("Upload Failed", error instanceof Error ? error.message : "Request failed.", "error");
+      pushToast(
+        "Upload Failed",
+        error instanceof Error ? error.message : "Request failed.",
+        "error",
+      );
     }
   }
 
   async function sendTestEmail() {
     if (!selectedTemplateId || !testEmail.trim()) {
-      pushToast("Missing Email", "Enter a recipient email for the test send.", "error");
+      pushToast(
+        "Missing Email",
+        "Enter a recipient email for the test send.",
+        "error",
+      );
       return;
     }
     try {
@@ -362,12 +487,19 @@ export function TemplatesWorkspace() {
         method: "POST",
         bodyJson: {
           test_email: testEmail.trim(),
-          sample_data: previewData
-        }
+          sample_data: previewData,
+        },
       });
-      pushToast("Test Email Sent", "The active provider accepted the test send.");
+      pushToast(
+        "Test Email Sent",
+        "The active provider accepted the test send.",
+      );
     } catch (error) {
-      pushToast("Test Send Failed", error instanceof Error ? error.message : "Request failed.", "error");
+      pushToast(
+        "Test Send Failed",
+        error instanceof Error ? error.message : "Request failed.",
+        "error",
+      );
     }
   }
 
@@ -385,34 +517,54 @@ export function TemplatesWorkspace() {
       }
     }
     const nextBlocks = blocks.map((block) =>
-      String(block.id) === selectedBlockId ? { ...block, [key]: nextValue } : block
+      String(block.id) === selectedBlockId
+        ? { ...block, [key]: nextValue }
+        : block,
     );
-    setDraftState({ ...draftState, design_json: { ...draftState.design_json, blocks: nextBlocks } });
+    setDraftState({
+      ...draftState,
+      design_json: { ...draftState.design_json, blocks: nextBlocks },
+    });
   }
 
   function addBlock(type: string) {
     if (!draftState) return;
     const nextBlock = createBuilderBlock(type);
     const nextBlocks = [...blocks, nextBlock];
-    setDraftState({ ...draftState, editor_mode: "builder", design_json: { ...draftState.design_json, blocks: nextBlocks } });
+    setDraftState({
+      ...draftState,
+      editor_mode: "builder",
+      design_json: { ...draftState.design_json, blocks: nextBlocks },
+    });
     setActiveTab("design");
     setSelectedBlockId(String(nextBlock.id));
   }
 
   function moveBlock(direction: -1 | 1) {
     if (!selectedBlockId || !draftState) return;
-    const currentIndex = blocks.findIndex((block) => String(block.id) === selectedBlockId);
+    const currentIndex = blocks.findIndex(
+      (block) => String(block.id) === selectedBlockId,
+    );
     const nextIndex = currentIndex + direction;
     if (currentIndex < 0 || nextIndex < 0 || nextIndex >= blocks.length) return;
     const nextBlocks = [...blocks];
-    [nextBlocks[currentIndex], nextBlocks[nextIndex]] = [nextBlocks[nextIndex], nextBlocks[currentIndex]];
-    setDraftState({ ...draftState, design_json: { ...draftState.design_json, blocks: nextBlocks } });
+    [nextBlocks[currentIndex], nextBlocks[nextIndex]] = [
+      nextBlocks[nextIndex],
+      nextBlocks[currentIndex],
+    ];
+    setDraftState({
+      ...draftState,
+      design_json: { ...draftState.design_json, blocks: nextBlocks },
+    });
   }
 
   function removeBlock(blockId: string) {
     if (!draftState) return;
     const nextBlocks = blocks.filter((block) => String(block.id) !== blockId);
-    setDraftState({ ...draftState, design_json: { ...draftState.design_json, blocks: nextBlocks } });
+    setDraftState({
+      ...draftState,
+      design_json: { ...draftState.design_json, blocks: nextBlocks },
+    });
     setSelectedBlockId((nextBlocks[0]?.id as string) || null);
   }
 
@@ -420,11 +572,18 @@ export function TemplatesWorkspace() {
     if (!draftState) return;
     setDraftState({
       ...draftState,
-      merge_fields_schema: [...draftState.merge_fields_schema, createCustomField(draftState.merge_fields_schema)]
+      merge_fields_schema: [
+        ...draftState.merge_fields_schema,
+        createCustomField(draftState.merge_fields_schema),
+      ],
     });
   }
 
-  function updateSchemaField(index: number, key: keyof TemplateField, value: string | boolean) {
+  function updateSchemaField(
+    index: number,
+    key: keyof TemplateField,
+    value: string | boolean,
+  ) {
     if (!draftState) return;
     const nextFields = [...draftState.merge_fields_schema];
     nextFields[index] = { ...nextFields[index], [key]: value } as TemplateField;
@@ -450,16 +609,20 @@ export function TemplatesWorkspace() {
   }
 
   return (
-    <section className="view-panel">
-      <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-        <aside className="space-y-6">
+    <section className="view-panel min-w-0">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <aside className="min-w-0 space-y-6">
           <div className="bento-card group relative overflow-hidden p-5">
             <div className="pointer-events-none absolute right-0 top-0 h-32 w-32 rounded-full bg-blue-500/10 blur-2xl transition-colors group-hover:bg-blue-500/20" />
             <div className="relative z-10 mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold">Templates</h2>
               <button
                 type="button"
-                onClick={() => void queryClient.invalidateQueries({ queryKey: ["templates-workspace-list"] })}
+                onClick={() =>
+                  void queryClient.invalidateQueries({
+                    queryKey: ["templates-workspace-list"],
+                  })
+                }
                 className="text-xs text-gray-400 hover:text-white"
               >
                 Refresh
@@ -482,7 +645,9 @@ export function TemplatesWorkspace() {
               </button>
             </div>
 
-            <div className="relative z-10 mb-3 text-xs uppercase tracking-wider text-gray-500">Your Library</div>
+            <div className="relative z-10 mb-3 text-xs uppercase tracking-wider text-gray-500">
+              Your Library
+            </div>
             <div className="relative z-10 max-h-[400px] space-y-2 overflow-y-auto pr-2">
               {(templatesQuery.data?.templates || []).map((template) => (
                 <button
@@ -496,7 +661,12 @@ export function TemplatesWorkspace() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <div className="text-sm font-semibold text-white">{template.name}</div>
+                      <div
+                        className="max-w-[11rem] truncate text-sm font-semibold text-white"
+                        title={template.name}
+                      >
+                        {template.name}
+                      </div>
                       <div className="mt-1 text-xs uppercase tracking-[0.18em] text-gray-500">
                         {template.editor_mode}
                       </div>
@@ -508,9 +678,15 @@ export function TemplatesWorkspace() {
                     ) : null}
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {template.draft_version ? <StatusBadge value="draft" /> : null}
-                    {template.published_version ? <StatusBadge value="published" /> : null}
-                    {template.is_archived ? <StatusBadge value="archived" /> : null}
+                    {template.draft_version ? (
+                      <StatusBadge value="draft" />
+                    ) : null}
+                    {template.published_version ? (
+                      <StatusBadge value="published" />
+                    ) : null}
+                    {template.is_archived ? (
+                      <StatusBadge value="archived" />
+                    ) : null}
                   </div>
                 </button>
               ))}
@@ -522,12 +698,16 @@ export function TemplatesWorkspace() {
             </div>
 
             <div className="relative z-10 mt-6 border-t border-white/10 pt-4">
-              <label className="mb-2 block text-xs text-gray-400">Import HTML</label>
+              <label className="mb-2 block text-xs text-gray-400">
+                Import HTML
+              </label>
               <input
                 type="file"
                 accept=".html"
                 className="w-full text-xs text-gray-400"
-                onChange={(event) => setHtmlImportFile(event.target.files?.[0] || null)}
+                onChange={(event) =>
+                  setHtmlImportFile(event.target.files?.[0] || null)
+                }
               />
               <button
                 type="button"
@@ -540,7 +720,7 @@ export function TemplatesWorkspace() {
           </div>
         </aside>
 
-        <div className="bento-card flex h-[800px] flex-col overflow-hidden p-0">
+        <div className="bento-card min-w-0 flex h-[800px] flex-col overflow-hidden p-0">
           <div className="flex flex-col items-start justify-between gap-4 border-b border-white/10 bg-white/[0.01] p-6 sm:flex-row sm:items-center">
             <div>
               <h2
@@ -552,12 +732,20 @@ export function TemplatesWorkspace() {
               <div className="mt-1 text-xs text-gray-500">
                 {selectedTemplate ? (
                   <div className="flex flex-wrap gap-2">
-                    <span>{draftState?.editor_mode || selectedTemplate.editor_mode} mode</span>
+                    <span>
+                      {draftState?.editor_mode || selectedTemplate.editor_mode}{" "}
+                      mode
+                    </span>
                     {selectedTemplate.draft_version ? (
-                      <span>Draft v{selectedTemplate.draft_version.version_number}</span>
+                      <span>
+                        Draft v{selectedTemplate.draft_version.version_number}
+                      </span>
                     ) : null}
                     {selectedTemplate.published_version ? (
-                      <span>Published v{selectedTemplate.published_version.version_number}</span>
+                      <span>
+                        Published v
+                        {selectedTemplate.published_version.version_number}
+                      </span>
                     ) : (
                       <span>Not yet published</span>
                     )}
@@ -568,19 +756,39 @@ export function TemplatesWorkspace() {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <button type="button" onClick={() => void renameTemplate()} className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs transition hover:bg-white/10">
+              <button
+                type="button"
+                onClick={() => void renameTemplate()}
+                className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs transition hover:bg-white/10"
+              >
                 Rename
               </button>
-              <button type="button" onClick={() => void duplicateTemplate()} className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs transition hover:bg-white/10">
+              <button
+                type="button"
+                onClick={() => void duplicateTemplate()}
+                className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs transition hover:bg-white/10"
+              >
                 Duplicate
               </button>
-              <button type="button" onClick={() => void archiveTemplate()} className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs transition hover:bg-white/10">
+              <button
+                type="button"
+                onClick={() => void archiveTemplate()}
+                className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs transition hover:bg-white/10"
+              >
                 {selectedTemplate?.is_archived ? "Restore" : "Archive"}
               </button>
-              <button type="button" onClick={() => void setDefaultTemplate()} className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs transition hover:bg-white/10">
+              <button
+                type="button"
+                onClick={() => void setDefaultTemplate()}
+                className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs transition hover:bg-white/10"
+              >
                 Set Default
               </button>
-              <button type="button" onClick={() => void deleteTemplate()} className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs text-red-400 transition hover:bg-red-500/20">
+              <button
+                type="button"
+                onClick={() => void deleteTemplate()}
+                className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs text-red-400 transition hover:bg-red-500/20"
+              >
                 Delete
               </button>
               <div className="mx-1 h-6 w-px bg-white/10" />
@@ -626,7 +834,9 @@ export function TemplatesWorkspace() {
               </button>
             ))}
             <div className="ml-auto text-xs text-gray-500">
-              {selectedDraftVersion ? <StatusBadge value={selectedDraftVersion.status || "draft"} /> : null}
+              {selectedDraftVersion ? (
+                <StatusBadge value={selectedDraftVersion.status || "draft"} />
+              ) : null}
             </div>
           </div>
 
@@ -641,7 +851,9 @@ export function TemplatesWorkspace() {
               <div className="grid h-full items-start gap-8 lg:grid-cols-[1fr_320px]">
                 <div className="flex h-[750px] flex-col overflow-hidden rounded-2xl border border-white/5 bg-black/20 shadow-2xl">
                   <div className="relative z-20 flex items-center justify-between border-b border-white/5 bg-black/40 px-6 py-4 shadow-sm">
-                    <div className="text-sm font-semibold tracking-wide text-white">Workspace Canvas</div>
+                    <div className="text-sm font-semibold tracking-wide text-white">
+                      Workspace Canvas
+                    </div>
                     <div className="grid grid-cols-2 gap-2">
                       {BLOCK_TYPES.map((type) => (
                         <button
@@ -660,7 +872,10 @@ export function TemplatesWorkspace() {
                   <div className="relative z-10 flex-1 space-y-4 overflow-y-auto p-6">
                     {!blocks.length ? (
                       <div className="flex flex-col items-center justify-center space-y-3 pt-24 opacity-50">
-                        <p>No blocks yet. Add one from the canvas header to get started.</p>
+                        <p>
+                          No blocks yet. Add one from the canvas header to get
+                          started.
+                        </p>
                       </div>
                     ) : (
                       blocks.map((block, index) => {
@@ -683,7 +898,9 @@ export function TemplatesWorkspace() {
                             <div className="flex items-start justify-between gap-4">
                               <button
                                 type="button"
-                                onClick={() => setSelectedBlockId(String(block.id))}
+                                onClick={() =>
+                                  setSelectedBlockId(String(block.id))
+                                }
                                 className="flex-1 text-left"
                               >
                                 <div className="text-xs uppercase tracking-[0.18em] text-gray-500">
@@ -750,9 +967,14 @@ export function TemplatesWorkspace() {
                           <div className="text-xs uppercase tracking-[0.18em] text-gray-500">
                             {String(selectedBlock.type)}
                           </div>
-                          <div className="mt-1 text-sm font-semibold text-white">Inspector</div>
+                          <div className="mt-1 text-sm font-semibold text-white">
+                            Inspector
+                          </div>
                         </div>
-                        {(BLOCK_FIELD_CONFIG[String(selectedBlock.type)] || BLOCK_FIELD_CONFIG.text).map((field) => {
+                        {(
+                          BLOCK_FIELD_CONFIG[String(selectedBlock.type)] ||
+                          BLOCK_FIELD_CONFIG.text
+                        ).map((field) => {
                           const rawValue = selectedBlock[field.key];
                           const value =
                             field.type === "json"
@@ -760,18 +982,33 @@ export function TemplatesWorkspace() {
                               : String(rawValue ?? "");
                           return (
                             <div key={field.key}>
-                              <label className="text-sm text-gray-400">{field.label}</label>
-                              {field.type === "textarea" || field.type === "json" ? (
+                              <label className="text-sm text-gray-400">
+                                {field.label}
+                              </label>
+                              {field.type === "textarea" ||
+                              field.type === "json" ? (
                                 <textarea
                                   spellCheck={false}
                                   value={value}
-                                  onChange={(event) => updateBlockField(field.key, event.target.value, field.type)}
+                                  onChange={(event) =>
+                                    updateBlockField(
+                                      field.key,
+                                      event.target.value,
+                                      field.type,
+                                    )
+                                  }
                                   className="mt-2 h-28 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500"
                                 />
                               ) : field.type === "select" ? (
                                 <select
                                   value={String(rawValue ?? "")}
-                                  onChange={(event) => updateBlockField(field.key, event.target.value, field.type)}
+                                  onChange={(event) =>
+                                    updateBlockField(
+                                      field.key,
+                                      event.target.value,
+                                      field.type,
+                                    )
+                                  }
                                   className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500"
                                 >
                                   {field.options?.map((option) => (
@@ -784,7 +1021,13 @@ export function TemplatesWorkspace() {
                                 <input
                                   type={field.type}
                                   value={value}
-                                  onChange={(event) => updateBlockField(field.key, event.target.value, field.type)}
+                                  onChange={(event) =>
+                                    updateBlockField(
+                                      field.key,
+                                      event.target.value,
+                                      field.type,
+                                    )
+                                  }
                                   className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500"
                                 />
                               )}
@@ -792,18 +1035,32 @@ export function TemplatesWorkspace() {
                           );
                         })}
                         <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                          <div className="text-xs uppercase tracking-[0.18em] text-gray-500">Visibility rule</div>
+                          <div className="text-xs uppercase tracking-[0.18em] text-gray-500">
+                            Visibility rule
+                          </div>
                           <div className="mt-3 grid gap-3">
                             <div>
-                              <label className="text-sm text-gray-400">Field</label>
+                              <label className="text-sm text-gray-400">
+                                Field
+                              </label>
                               <select
-                                value={String(selectedBlock.visibility_field || "")}
-                                onChange={(event) => updateBlockField("visibility_field", event.target.value, "select")}
+                                value={String(
+                                  selectedBlock.visibility_field || "",
+                                )}
+                                onChange={(event) =>
+                                  updateBlockField(
+                                    "visibility_field",
+                                    event.target.value,
+                                    "select",
+                                  )
+                                }
                                 className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500"
                               >
                                 <option value="">Always visible</option>
                                 {draftState.merge_fields_schema
-                                  .filter((field) => field.key !== "unsubscribe_url")
+                                  .filter(
+                                    (field) => field.key !== "unsubscribe_url",
+                                  )
                                   .map((field) => (
                                     <option key={field.key} value={field.key}>
                                       {field.key}
@@ -812,14 +1069,28 @@ export function TemplatesWorkspace() {
                               </select>
                             </div>
                             <div>
-                              <label className="text-sm text-gray-400">Mode</label>
+                              <label className="text-sm text-gray-400">
+                                Mode
+                              </label>
                               <select
-                                value={String(selectedBlock.visibility_mode || "present")}
-                                onChange={(event) => updateBlockField("visibility_mode", event.target.value, "select")}
+                                value={String(
+                                  selectedBlock.visibility_mode || "present",
+                                )}
+                                onChange={(event) =>
+                                  updateBlockField(
+                                    "visibility_mode",
+                                    event.target.value,
+                                    "select",
+                                  )
+                                }
                                 className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500"
                               >
-                                <option value="present">Show when field is present</option>
-                                <option value="missing">Show when field is missing</option>
+                                <option value="present">
+                                  Show when field is present
+                                </option>
+                                <option value="missing">
+                                  Show when field is missing
+                                </option>
                               </select>
                             </div>
                           </div>
@@ -837,7 +1108,11 @@ export function TemplatesWorkspace() {
                   spellCheck={false}
                   value={draftState.html_source}
                   onChange={(event) =>
-                    setDraftState({ ...draftState, html_source: event.target.value, editor_mode: "code" })
+                    setDraftState({
+                      ...draftState,
+                      html_source: event.target.value,
+                      editor_mode: "code",
+                    })
                   }
                   className="h-full w-full rounded-xl border border-white/10 bg-black/50 p-4 font-mono text-sm text-gray-300"
                 />
@@ -846,22 +1121,29 @@ export function TemplatesWorkspace() {
 
             {draftState && activeTab === "preview" ? (
               <div className="grid h-full gap-6 lg:grid-cols-[280px_1fr]">
-                <div className="space-y-6">
+                <div className="min-w-0 space-y-6">
                   <div>
                     <div className="mb-3 flex items-center justify-between">
-                      <div className="text-xs uppercase tracking-wider text-gray-500">Sample Data</div>
+                      <div className="text-xs uppercase tracking-wider text-gray-500">
+                        Sample Data
+                      </div>
                       <button
                         type="button"
                         onClick={() =>
                           setPreviewData(
                             Object.fromEntries(
                               draftState.merge_fields_schema
-                                .filter((field) => field.key !== "unsubscribe_url")
+                                .filter(
+                                  (field) => field.key !== "unsubscribe_url",
+                                )
                                 .map((field) => [
                                   field.key,
-                                  field.sample_value || field.default_value || previewData[field.key] || ""
-                                ])
-                            )
+                                  field.sample_value ||
+                                    field.default_value ||
+                                    previewData[field.key] ||
+                                    "",
+                                ]),
+                            ),
                           )
                         }
                         className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-black transition hover:bg-gray-200"
@@ -874,11 +1156,16 @@ export function TemplatesWorkspace() {
                         .filter((field) => field.key !== "unsubscribe_url")
                         .map((field) => (
                           <div key={field.key}>
-                            <label className="text-sm text-gray-400">{field.label || field.key}</label>
+                            <label className="text-sm text-gray-400">
+                              {field.label || field.key}
+                            </label>
                             <input
                               value={previewData[field.key] || ""}
                               onChange={(event) =>
-                                setPreviewData({ ...previewData, [field.key]: event.target.value })
+                                setPreviewData({
+                                  ...previewData,
+                                  [field.key]: event.target.value,
+                                })
                               }
                               className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500"
                             />
@@ -894,12 +1181,14 @@ export function TemplatesWorkspace() {
                     </button>
                   </div>
                   <div>
-                    <div className="mb-3 text-xs uppercase tracking-wider text-gray-500">Modes</div>
+                    <div className="mb-3 text-xs uppercase tracking-wider text-gray-500">
+                      Modes
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       {[
                         { label: "Full Width", width: "100%" },
                         { label: "Desktop", width: "680px" },
-                        { label: "Mobile", width: "360px" }
+                        { label: "Mobile", width: "360px" },
                       ].map((option) => (
                         <button
                           key={option.width}
@@ -917,7 +1206,9 @@ export function TemplatesWorkspace() {
                     </div>
                   </div>
                   <div className="rounded-lg border border-white/5 bg-white/5 p-3 text-xs text-gray-400">
-                    {previewSubject ? `Subject: ${previewSubject}` : "No subject set."}
+                    {previewSubject
+                      ? `Subject: ${previewSubject}`
+                      : "No subject set."}
                   </div>
                 </div>
                 <div
@@ -927,7 +1218,9 @@ export function TemplatesWorkspace() {
                   <iframe
                     title="Template Preview"
                     sandbox=""
-                    srcDoc={previewHtml || selectedDraftVersion?.compiled_html || ""}
+                    srcDoc={
+                      previewHtml || selectedDraftVersion?.compiled_html || ""
+                    }
                     className="h-full w-full border-0 bg-white"
                   />
                 </div>
@@ -939,18 +1232,32 @@ export function TemplatesWorkspace() {
                 <div className="space-y-6">
                   <div className="space-y-4 rounded-xl border border-white/5 bg-white/5 p-5">
                     <div>
-                      <label className="mb-1 block text-xs text-gray-500">Subject</label>
+                      <label className="mb-1 block text-xs text-gray-500">
+                        Subject
+                      </label>
                       <input
                         value={draftState.subject}
-                        onChange={(event) => setDraftState({ ...draftState, subject: event.target.value })}
+                        onChange={(event) =>
+                          setDraftState({
+                            ...draftState,
+                            subject: event.target.value,
+                          })
+                        }
                         className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-purple-500"
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs text-gray-500">Preheader</label>
+                      <label className="mb-1 block text-xs text-gray-500">
+                        Preheader
+                      </label>
                       <input
                         value={draftState.preheader}
-                        onChange={(event) => setDraftState({ ...draftState, preheader: event.target.value })}
+                        onChange={(event) =>
+                          setDraftState({
+                            ...draftState,
+                            preheader: event.target.value,
+                          })
+                        }
                         className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-purple-500"
                       />
                     </div>
@@ -958,7 +1265,9 @@ export function TemplatesWorkspace() {
 
                   <div className="rounded-xl border border-white/5 bg-white/5 p-5">
                     <div className="mb-4 flex items-center justify-between">
-                      <div className="text-xs uppercase tracking-wider text-gray-500">Merge Fields</div>
+                      <div className="text-xs uppercase tracking-wider text-gray-500">
+                        Merge Fields
+                      </div>
                       <button
                         type="button"
                         onClick={() => addCustomField()}
@@ -969,7 +1278,10 @@ export function TemplatesWorkspace() {
                     </div>
                     <div className="max-h-[360px] space-y-2 overflow-auto pr-2">
                       {draftState.merge_fields_schema.map((field, index) => (
-                        <div key={`${field.key}-${index}`} className="rounded-3xl border border-white/10 bg-white/5 p-4">
+                        <div
+                          key={`${field.key}-${index}`}
+                          className="rounded-3xl border border-white/10 bg-white/5 p-4"
+                        >
                           <div className="flex items-start justify-between gap-4">
                             <div>
                               <div className="text-xs uppercase tracking-[0.18em] text-gray-500">
@@ -995,47 +1307,87 @@ export function TemplatesWorkspace() {
                           </div>
                           <div className="mt-4 grid gap-3 md:grid-cols-2">
                             <div>
-                              <label className="text-sm text-gray-400">Label</label>
+                              <label className="text-sm text-gray-400">
+                                Label
+                              </label>
                               <input
                                 value={field.label || ""}
                                 disabled={Boolean(field.builtin)}
-                                onChange={(event) => updateSchemaField(index, "label", event.target.value)}
+                                onChange={(event) =>
+                                  updateSchemaField(
+                                    index,
+                                    "label",
+                                    event.target.value,
+                                  )
+                                }
                                 className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500 disabled:opacity-60"
                               />
                             </div>
                             <div>
-                              <label className="text-sm text-gray-400">Key</label>
+                              <label className="text-sm text-gray-400">
+                                Key
+                              </label>
                               <input
                                 value={field.key || ""}
                                 disabled={Boolean(field.builtin)}
-                                onChange={(event) => updateSchemaField(index, "key", event.target.value)}
+                                onChange={(event) =>
+                                  updateSchemaField(
+                                    index,
+                                    "key",
+                                    event.target.value,
+                                  )
+                                }
                                 className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500 disabled:opacity-60"
                               />
                             </div>
                             <div>
-                              <label className="text-sm text-gray-400">Default value</label>
+                              <label className="text-sm text-gray-400">
+                                Default value
+                              </label>
                               <input
                                 value={field.default_value || ""}
                                 disabled={Boolean(field.builtin)}
-                                onChange={(event) => updateSchemaField(index, "default_value", event.target.value)}
+                                onChange={(event) =>
+                                  updateSchemaField(
+                                    index,
+                                    "default_value",
+                                    event.target.value,
+                                  )
+                                }
                                 className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500 disabled:opacity-60"
                               />
                             </div>
                             <div>
-                              <label className="text-sm text-gray-400">Sample value</label>
+                              <label className="text-sm text-gray-400">
+                                Sample value
+                              </label>
                               <input
                                 value={field.sample_value || ""}
                                 disabled={Boolean(field.builtin)}
-                                onChange={(event) => updateSchemaField(index, "sample_value", event.target.value)}
+                                onChange={(event) =>
+                                  updateSchemaField(
+                                    index,
+                                    "sample_value",
+                                    event.target.value,
+                                  )
+                                }
                                 className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500 disabled:opacity-60"
                               />
                             </div>
                             <div className="md:col-span-2">
-                              <label className="text-sm text-gray-400">Description</label>
+                              <label className="text-sm text-gray-400">
+                                Description
+                              </label>
                               <input
                                 value={field.description || ""}
                                 disabled={Boolean(field.builtin)}
-                                onChange={(event) => updateSchemaField(index, "description", event.target.value)}
+                                onChange={(event) =>
+                                  updateSchemaField(
+                                    index,
+                                    "description",
+                                    event.target.value,
+                                  )
+                                }
                                 className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition focus:border-purple-500 disabled:opacity-60"
                               />
                             </div>
@@ -1044,7 +1396,13 @@ export function TemplatesWorkspace() {
                                 type="checkbox"
                                 checked={field.required}
                                 disabled={Boolean(field.builtin)}
-                                onChange={(event) => updateSchemaField(index, "required", event.target.checked)}
+                                onChange={(event) =>
+                                  updateSchemaField(
+                                    index,
+                                    "required",
+                                    event.target.checked,
+                                  )
+                                }
                                 className="h-4 w-4 rounded border-white/10 bg-black/40"
                               />
                               Required during import validation
@@ -1058,8 +1416,12 @@ export function TemplatesWorkspace() {
 
                 <div className="space-y-6">
                   <div className="rounded-xl border border-white/5 bg-white/5 p-5">
-                    <div className="mb-2 text-xs uppercase tracking-wider text-gray-500">Test Send</div>
-                    <div className="mb-4 text-xs text-gray-400">Fire a real test email with current draft layout.</div>
+                    <div className="mb-2 text-xs uppercase tracking-wider text-gray-500">
+                      Test Send
+                    </div>
+                    <div className="mb-4 text-xs text-gray-400">
+                      Fire a real test email with current draft layout.
+                    </div>
                     <input
                       type="email"
                       placeholder="you@domain.com"
@@ -1077,12 +1439,16 @@ export function TemplatesWorkspace() {
                   </div>
 
                   <div className="rounded-xl border border-white/5 bg-white/5 p-5">
-                    <div className="mb-4 text-xs uppercase tracking-wider text-gray-500">Assets Gallery</div>
+                    <div className="mb-4 text-xs uppercase tracking-wider text-gray-500">
+                      Assets Gallery
+                    </div>
                     <input
                       type="file"
                       accept=".png,.jpg,.jpeg,.gif,.webp"
                       className="mb-3 w-full text-xs text-gray-400"
-                      onChange={(event) => setAssetFile(event.target.files?.[0] || null)}
+                      onChange={(event) =>
+                        setAssetFile(event.target.files?.[0] || null)
+                      }
                     />
                     <button
                       type="button"
@@ -1094,11 +1460,21 @@ export function TemplatesWorkspace() {
                     </button>
                     <div className="max-h-[180px] space-y-2 overflow-auto pr-2">
                       {(assetsQuery.data?.assets || []).map((asset) => (
-                        <div key={asset.filename} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <div
+                          key={asset.filename}
+                          className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                        >
                           <div className="flex items-center justify-between gap-4">
                             <div>
-                              <div className="text-sm font-medium text-white">{asset.filename}</div>
-                              <div className="mt-1 text-xs text-gray-500">{Math.round(asset.size / 1024)} KB</div>
+                              <div
+                                className="max-w-[11rem] truncate text-sm font-medium text-white"
+                                title={asset.filename}
+                              >
+                                {asset.filename}
+                              </div>
+                              <div className="mt-1 text-xs text-gray-500">
+                                {Math.round(asset.size / 1024)} KB
+                              </div>
                             </div>
                             <button
                               type="button"
@@ -1124,18 +1500,23 @@ export function TemplatesWorkspace() {
                   </div>
 
                   <div className="rounded-xl border border-white/5 bg-white/5 p-5">
-                    <div className="mb-3 text-xs uppercase tracking-wider text-gray-500">Published Snapshot</div>
+                    <div className="mb-3 text-xs uppercase tracking-wider text-gray-500">
+                      Published Snapshot
+                    </div>
                     {publishedVersion ? (
                       <div className="space-y-2 text-sm text-gray-300">
                         <StatusBadge value="published" />
                         <div>Subject: {publishedVersion.subject}</div>
                         <div>Version: {publishedVersion.version_number}</div>
                         <div className="text-xs text-gray-500">
-                          Published at {publishedVersion.published_at || "not available"}
+                          Published at{" "}
+                          {publishedVersion.published_at || "not available"}
                         </div>
                       </div>
                     ) : (
-                      <div className="text-sm text-gray-500">No published version yet.</div>
+                      <div className="text-sm text-gray-500">
+                        No published version yet.
+                      </div>
                     )}
                   </div>
                 </div>

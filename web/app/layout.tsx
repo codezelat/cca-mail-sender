@@ -9,21 +9,24 @@ import { ToastProvider } from "@/components/providers/toast-provider";
 
 const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-inter"
+  variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
   title: "CCA Campaign Manager",
   description: "Production email campaign manager for Brevo and Kit.",
   icons: {
-    icon: "/logo.png"
-  }
+    icon: "/logo.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className="dark">
-      <body className={`${inter.className} bg-black text-white antialiased selection:bg-purple-500/30`}>
+      <body
+        suppressHydrationWarning
+        className={`${inter.className} bg-black text-white antialiased selection:bg-purple-500/30`}
+      >
         <QueryProvider>
           <ToastProvider>
             <DialogProvider>{children}</DialogProvider>

@@ -11,7 +11,7 @@ import type {
   ImportAnalysis,
   RecipientActivityItem,
   SettingsRecord,
-  TemplateSummary
+  TemplateSummary,
 } from "@/lib/types";
 
 type StatsResponse = {
@@ -36,7 +36,7 @@ function formatDate(value?: string | null) {
     month: "short",
     day: "2-digit",
     hour: "2-digit",
-    minute: "2-digit"
+    minute: "2-digit",
   });
 }
 
@@ -44,51 +44,65 @@ export function DashboardHome() {
   const queryClient = useQueryClient();
   const { pushToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [settingsDraft, setSettingsDraft] = useState<SettingsRecord | null>(null);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
-  const [importSession, setImportSession] = useState<ImportAnalysis | null>(null);
+  const [settingsDraft, setSettingsDraft] = useState<SettingsRecord | null>(
+    null,
+  );
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(
+    null,
+  );
+  const [importSession, setImportSession] = useState<ImportAnalysis | null>(
+    null,
+  );
   const [stagedBatch, setStagedBatch] = useState<BatchSummary | null>(null);
   const [activityFilter, setActivityFilter] = useState("");
 
   const statsQuery = useQuery({
     queryKey: ["dashboard-stats"],
-    queryFn: () => apiFetch<StatsResponse>("/api/v1/stats")
+    queryFn: () => apiFetch<StatsResponse>("/api/v1/stats"),
   });
   const settingsQuery = useQuery({
     queryKey: ["dashboard-settings"],
-    queryFn: () => apiFetch<SettingsRecord>("/api/v1/settings")
+    queryFn: () => apiFetch<SettingsRecord>("/api/v1/settings"),
   });
   const templatesQuery = useQuery({
     queryKey: ["dashboard-templates"],
-    queryFn: () => apiFetch<{ templates: TemplateSummary[]; default_template_id?: number | null }>("/api/v1/templates")
+    queryFn: () =>
+      apiFetch<{
+        templates: TemplateSummary[];
+        default_template_id?: number | null;
+      }>("/api/v1/templates"),
   });
   const batchesQuery = useQuery({
     queryKey: ["dashboard-batches"],
-    queryFn: () => apiFetch<{ batches: BatchSummary[] }>("/api/v1/batches")
+    queryFn: () => apiFetch<{ batches: BatchSummary[] }>("/api/v1/batches"),
   });
   const activityQuery = useQuery({
     queryKey: ["dashboard-activity", activityFilter],
     queryFn: () =>
       apiFetch<{ rows: RecipientActivityItem[] }>(
-        `/api/v1/activity?status=${encodeURIComponent(activityFilter)}`
-      )
+        `/api/v1/activity?status=${encodeURIComponent(activityFilter)}`,
+      ),
   });
 
   const publishedTemplates = useMemo(
-    () => (templatesQuery.data?.templates || []).filter((item) => item.published_version && !item.is_archived),
-    [templatesQuery.data]
+    () =>
+      (templatesQuery.data?.templates || []).filter(
+        (item) => item.published_version && !item.is_archived,
+      ),
+    [templatesQuery.data],
   );
   const selectedPublishedTemplate = useMemo(
-    () => publishedTemplates.find((item) => item.id === selectedTemplateId) || null,
-    [publishedTemplates, selectedTemplateId]
+    () =>
+      publishedTemplates.find((item) => item.id === selectedTemplateId) || null,
+    [publishedTemplates, selectedTemplateId],
   );
   const selectedTemplateFields = useMemo(() => {
-    const fields = (selectedPublishedTemplate?.published_version?.merge_fields_schema || []).filter(
-      (field) => field.key !== "unsubscribe_url"
-    );
+    const fields = (
+      selectedPublishedTemplate?.published_version?.merge_fields_schema || []
+    ).filter((field) => field.key !== "unsubscribe_url");
     return {
       required: fields.filter((field) => field.required),
-      optional: fields.filter((field) => !field.required)
+      optional: fields.filter((field) => !field.required),
     };
   }, [selectedPublishedTemplate]);
   const providerLabel =
@@ -97,7 +111,8 @@ export function DashboardHome() {
       : settingsDraft?.provider === "brevo"
         ? "Brevo"
         : "Provider";
-  const providerEnvKey = settingsDraft?.provider === "kit" ? "KIT_API_KEY" : "BREVO_SMTP_API_KEY";
+  const providerEnvKey =
+    settingsDraft?.provider === "kit" ? "KIT_API_KEY" : "BREVO_SMTP_API_KEY";
 
   useEffect(() => {
     if (settingsQuery.data) {
@@ -108,7 +123,9 @@ export function DashboardHome() {
   useEffect(() => {
     if (selectedTemplateId) return;
     const templateId =
-      settingsQuery.data?.default_template_id || templatesQuery.data?.default_template_id || null;
+      settingsQuery.data?.default_template_id ||
+      templatesQuery.data?.default_template_id ||
+      null;
     if (templateId) {
       setSelectedTemplateId(templateId);
     }
@@ -116,60 +133,81 @@ export function DashboardHome() {
 
   const settingsMutation = useMutation({
     mutationFn: (payload: SettingsRecord) =>
-      apiFetch<{ settings: SettingsRecord }>("/api/v1/settings", { method: "POST", bodyJson: payload }),
+      apiFetch<{ settings: SettingsRecord }>("/api/v1/settings", {
+        method: "POST",
+        bodyJson: payload,
+      }),
     onSuccess: async (data) => {
       pushToast("Settings Saved", "Sender settings were updated.");
       setSettingsDraft(data.settings);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["dashboard-settings"] }),
         queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard-templates"] })
+        queryClient.invalidateQueries({ queryKey: ["dashboard-templates"] }),
       ]);
     },
     onError: (error) => {
-      pushToast("Save Failed", error instanceof Error ? error.message : "Request failed.", "error");
-    }
+      pushToast(
+        "Save Failed",
+        error instanceof Error ? error.message : "Request failed.",
+        "error",
+      );
+    },
   });
 
   const validateMutation = useMutation({
     mutationFn: (sessionId: number) =>
-      apiFetch<{ validation: ImportAnalysis }>(`/api/v1/imports/${sessionId}/validate`, {
-        method: "POST",
-        bodyJson: {}
-      }),
+      apiFetch<{ validation: ImportAnalysis }>(
+        `/api/v1/imports/${sessionId}/validate`,
+        {
+          method: "POST",
+          bodyJson: {},
+        },
+      ),
     onSuccess: (data) => {
       setImportSession(data.validation);
-      pushToast("Validation Complete", "The import file was checked against the selected template.");
+      pushToast(
+        "Validation Complete",
+        "The import file was checked against the selected template.",
+      );
     },
     onError: (error) => {
-      pushToast("Validation Failed", error instanceof Error ? error.message : "Request failed.", "error");
-    }
+      pushToast(
+        "Validation Failed",
+        error instanceof Error ? error.message : "Request failed.",
+        "error",
+      );
+    },
   });
 
   const stageMutation = useMutation({
     mutationFn: (sessionId: number) =>
       apiFetch<{ batch: BatchSummary }>(`/api/v1/imports/${sessionId}/stage`, {
         method: "POST",
-        bodyJson: {}
+        bodyJson: {},
       }),
     onSuccess: async (data) => {
       setStagedBatch(data.batch);
       pushToast("Batch Staged", `${data.batch.name} is ready to launch.`);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["dashboard-batches"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] })
+        queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] }),
       ]);
     },
     onError: (error) => {
-      pushToast("Staging Failed", error instanceof Error ? error.message : "Request failed.", "error");
-    }
+      pushToast(
+        "Staging Failed",
+        error instanceof Error ? error.message : "Request failed.",
+        "error",
+      );
+    },
   });
 
   const launchMutation = useMutation({
     mutationFn: (batchId: number) =>
       apiFetch<{ batch: BatchSummary }>(`/api/v1/batches/${batchId}/launch`, {
         method: "POST",
-        bodyJson: {}
+        bodyJson: {},
       }),
     onSuccess: async (data) => {
       setStagedBatch(data.batch);
@@ -177,76 +215,114 @@ export function DashboardHome() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["dashboard-batches"] }),
         queryClient.invalidateQueries({ queryKey: ["dashboard-activity"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] })
+        queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] }),
       ]);
     },
     onError: (error) => {
-      pushToast("Launch Failed", error instanceof Error ? error.message : "Request failed.", "error");
-    }
+      pushToast(
+        "Launch Failed",
+        error instanceof Error ? error.message : "Request failed.",
+        "error",
+      );
+    },
   });
 
   const resendMutation = useMutation({
     mutationFn: (recipientId: number) =>
-      apiFetch(`/api/v1/recipients/${recipientId}/resend`, { method: "POST", bodyJson: {} }),
+      apiFetch(`/api/v1/recipients/${recipientId}/resend`, {
+        method: "POST",
+        bodyJson: {},
+      }),
     onSuccess: async () => {
-      pushToast("Recipient Requeued", "The recipient was queued from the original version snapshot.");
+      pushToast(
+        "Recipient Requeued",
+        "The recipient was queued from the original version snapshot.",
+      );
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["dashboard-activity"] }),
         queryClient.invalidateQueries({ queryKey: ["dashboard-batches"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] })
+        queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] }),
       ]);
     },
     onError: (error) => {
-      pushToast("Resend Failed", error instanceof Error ? error.message : "Request failed.", "error");
-    }
+      pushToast(
+        "Resend Failed",
+        error instanceof Error ? error.message : "Request failed.",
+        "error",
+      );
+    },
   });
 
   async function analyzeImport(file: File) {
     if (!selectedTemplateId) {
-      pushToast("Template Required", "Select a published template before uploading.", "error");
+      pushToast(
+        "Template Required",
+        "Select a published template before uploading.",
+        "error",
+      );
       return;
     }
     try {
       const formData = buildUploadForm({
         template_id: selectedTemplateId,
-        file
+        file,
       });
-      const data = await apiFetch<{ import_session: ImportAnalysis }>("/api/v1/imports/analyze", {
-        method: "POST",
-        body: formData
-      });
+      const data = await apiFetch<{ import_session: ImportAnalysis }>(
+        "/api/v1/imports/analyze",
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
       setImportSession(data.import_session);
       setStagedBatch(null);
       pushToast("Import Analyzed", `${file.name} was analyzed successfully.`);
     } catch (error) {
-      pushToast("Import Analyze Failed", error instanceof Error ? error.message : "Request failed.", "error");
+      pushToast(
+        "Import Analyze Failed",
+        error instanceof Error ? error.message : "Request failed.",
+        "error",
+      );
     }
   }
 
   async function stageAndLaunch(sessionId: number) {
     try {
-      const stageData = await apiFetch<{ batch: BatchSummary }>(`/api/v1/imports/${sessionId}/stage`, {
-        method: "POST",
-        bodyJson: {}
-      });
+      const stageData = await apiFetch<{ batch: BatchSummary }>(
+        `/api/v1/imports/${sessionId}/stage`,
+        {
+          method: "POST",
+          bodyJson: {},
+        },
+      );
       setStagedBatch(stageData.batch);
-      const launchData = await apiFetch<{ batch: BatchSummary }>(`/api/v1/batches/${stageData.batch.id}/launch`, {
-        method: "POST",
-        bodyJson: {}
-      });
+      const launchData = await apiFetch<{ batch: BatchSummary }>(
+        `/api/v1/batches/${stageData.batch.id}/launch`,
+        {
+          method: "POST",
+          bodyJson: {},
+        },
+      );
       setStagedBatch(launchData.batch);
       pushToast("Batch Launched", `${launchData.batch.name} has been queued.`);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["dashboard-batches"] }),
         queryClient.invalidateQueries({ queryKey: ["dashboard-activity"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] })
+        queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] }),
       ]);
     } catch (error) {
-      pushToast("Launch Failed", error instanceof Error ? error.message : "Request failed.", "error");
+      pushToast(
+        "Launch Failed",
+        error instanceof Error ? error.message : "Request failed.",
+        "error",
+      );
     }
   }
 
-  async function updateImportMapping(nextMapping: Record<string, string>, selectedSheet?: string | null) {
+  async function updateImportMapping(
+    nextMapping: Record<string, string>,
+    selectedSheet?: string | null,
+  ) {
     if (!importSession) return;
     try {
       const data = await apiFetch<{ import_session: ImportAnalysis }>(
@@ -255,21 +331,29 @@ export function DashboardHome() {
           method: "POST",
           bodyJson: {
             mapping: nextMapping,
-            selected_sheet: selectedSheet ?? importSession.selected_sheet ?? null
-          }
-        }
+            selected_sheet:
+              selectedSheet ?? importSession.selected_sheet ?? null,
+          },
+        },
       );
       setImportSession(data.import_session);
     } catch (error) {
-      pushToast("Mapping Failed", error instanceof Error ? error.message : "Request failed.", "error");
+      pushToast(
+        "Mapping Failed",
+        error instanceof Error ? error.message : "Request failed.",
+        "error",
+      );
     }
   }
 
-  function onSettingsChange(event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+  function onSettingsChange(
+    event: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) {
     if (!settingsDraft) return;
     const { name } = event.target;
     let nextValue: string | number | boolean | null =
-      event.target instanceof HTMLInputElement && event.target.type === "checkbox"
+      event.target instanceof HTMLInputElement &&
+      event.target.type === "checkbox"
         ? event.target.checked
         : event.target.value;
 
@@ -282,7 +366,7 @@ export function DashboardHome() {
 
     const nextDraft = {
       ...settingsDraft,
-      [name]: nextValue
+      [name]: nextValue,
     };
 
     if (name === "use_env_provider_api_key" && nextValue === true) {
@@ -297,7 +381,7 @@ export function DashboardHome() {
   }
 
   return (
-    <section className="view-panel space-y-6">
+    <section className="view-panel min-w-0 space-y-6">
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
         <div className="bento-card p-4">
           <div className="metric-label">Contacts</div>
@@ -319,26 +403,37 @@ export function DashboardHome() {
         </div>
         <div className="bento-card border-yellow-500/10 bg-gradient-to-br from-yellow-500/5 to-transparent p-4">
           <div className="metric-label text-yellow-500/70">Queued</div>
-          <div className="mt-2 text-2xl font-bold text-yellow-400">{statsQuery.data?.queued ?? 0}</div>
+          <div className="mt-2 text-2xl font-bold text-yellow-400">
+            {statsQuery.data?.queued ?? 0}
+          </div>
         </div>
         <div className="bento-card border-green-500/10 bg-gradient-to-br from-green-500/5 to-transparent p-4">
           <div className="metric-label text-green-500/70">Sent</div>
-          <div className="mt-2 text-2xl font-bold text-green-400">{statsQuery.data?.sent ?? 0}</div>
+          <div className="mt-2 text-2xl font-bold text-green-400">
+            {statsQuery.data?.sent ?? 0}
+          </div>
         </div>
         <div className="bento-card border-red-500/10 bg-gradient-to-br from-red-500/5 to-transparent p-4">
           <div className="metric-label text-red-500/70">Failed</div>
-          <div className="mt-2 text-2xl font-bold text-red-400">{statsQuery.data?.failed ?? 0}</div>
+          <div className="mt-2 text-2xl font-bold text-red-400">
+            {statsQuery.data?.failed ?? 0}
+          </div>
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
-        <div className="space-y-6">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="min-w-0 space-y-6">
           <div className="bento-card group relative overflow-hidden p-6 md:p-8">
             <div className="pointer-events-none absolute right-0 top-0 -mr-20 -mt-20 h-64 w-64 rounded-full bg-purple-500/10 blur-3xl transition-colors group-hover:bg-purple-500/20" />
 
             <h2 className="relative z-10 mb-6 flex items-center gap-3 text-xl font-semibold">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500/20 text-purple-400">
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -360,20 +455,25 @@ export function DashboardHome() {
                     className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-2.5 text-sm text-white outline-none focus:border-purple-500"
                     value={selectedTemplateId ?? ""}
                     onChange={(event) =>
-                      setSelectedTemplateId(event.target.value ? Number(event.target.value) : null)
+                      setSelectedTemplateId(
+                        event.target.value ? Number(event.target.value) : null,
+                      )
                     }
                   >
                     <option value="">No published templates available</option>
                     {publishedTemplates.map((template) => (
                       <option key={template.id} value={template.id}>
-                        {template.name} · v{template.published_version?.version_number}
+                        {template.name} · v
+                        {template.published_version?.version_number}
                       </option>
                     ))}
                   </select>
                   <p className="mt-1 text-xs text-gray-500">
                     {selectedTemplateId
                       ? (() => {
-                          const template = publishedTemplates.find((item) => item.id === selectedTemplateId);
+                          const template = publishedTemplates.find(
+                            (item) => item.id === selectedTemplateId,
+                          );
                           return template?.published_version
                             ? `Published version ${template.published_version.version_number} · Subject: ${template.published_version.subject}`
                             : "Select a published template to unlock import validation.";
@@ -414,7 +514,8 @@ export function DashboardHome() {
                       Drop CSV/Excel here
                     </div>
                     <div className="mt-1 text-xs text-purple-300">
-                      {importSession?.original_filename || "Upload will analyze the selected file."}
+                      {importSession?.original_filename ||
+                        "Upload will analyze the selected file."}
                     </div>
                   </button>
                   <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-4">
@@ -423,12 +524,14 @@ export function DashboardHome() {
                     </div>
                     {!selectedPublishedTemplate ? (
                       <p className="mt-2 text-xs text-gray-400">
-                        Choose a published template to see the fields your upload should include.
+                        Choose a published template to see the fields your
+                        upload should include.
                       </p>
                     ) : (
                       <div className="mt-2 space-y-3">
                         <p className="text-xs text-gray-400">
-                          Your file can use different header names. You’ll match them in step 3.
+                          Your file can use different header names. You’ll match
+                          them in step 3.
                         </p>
                         <div>
                           <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-yellow-500/80">
@@ -445,7 +548,9 @@ export function DashboardHome() {
                                 </span>
                               ))
                             ) : (
-                              <span className="text-xs text-gray-500">No required fields.</span>
+                              <span className="text-xs text-gray-500">
+                                No required fields.
+                              </span>
                             )}
                           </div>
                         </div>
@@ -464,7 +569,9 @@ export function DashboardHome() {
                                 </span>
                               ))
                             ) : (
-                              <span className="text-xs text-gray-500">No optional fields.</span>
+                              <span className="text-xs text-gray-500">
+                                No optional fields.
+                              </span>
                             )}
                           </div>
                         </div>
@@ -495,7 +602,10 @@ export function DashboardHome() {
                     </label>
                     <button
                       type="button"
-                      onClick={() => importSession && validateMutation.mutate(importSession.id)}
+                      onClick={() =>
+                        importSession &&
+                        validateMutation.mutate(importSession.id)
+                      }
                       disabled={!importSession || validateMutation.isPending}
                       className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-black transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
                     >
@@ -507,7 +617,10 @@ export function DashboardHome() {
                       className="mb-3 w-full rounded-xl border border-white/10 bg-black/40 px-4 py-2.5 text-sm text-white outline-none focus:border-purple-500"
                       value={importSession.selected_sheet || ""}
                       onChange={(event) =>
-                        void updateImportMapping(importSession.mapping || {}, event.target.value || null)
+                        void updateImportMapping(
+                          importSession.mapping || {},
+                          event.target.value || null,
+                        )
                       }
                     >
                       {importSession.sheet_names.map((sheetName) => (
@@ -524,12 +637,19 @@ export function DashboardHome() {
                       </div>
                     ) : (
                       importSession.mappable_fields.map((field) => (
-                        <div key={field.key} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <div
+                          key={field.key}
+                          className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                        >
                           <div className="flex items-center justify-between gap-3">
                             <div>
-                              <div className="text-sm font-semibold text-white">{field.label || field.key}</div>
+                              <div className="text-sm font-semibold text-white">
+                                {field.label || field.key}
+                              </div>
                               <div className="mt-1 text-xs text-gray-500">
-                                {field.required ? "Required for validation" : field.description || "Optional field"}
+                                {field.required
+                                  ? "Required for validation"
+                                  : field.description || "Optional field"}
                               </div>
                             </div>
                             {field.required ? (
@@ -545,13 +665,17 @@ export function DashboardHome() {
                               void updateImportMapping(
                                 {
                                   ...(importSession.mapping || {}),
-                                  [field.key]: event.target.value
+                                  [field.key]: event.target.value,
                                 },
-                                importSession.selected_sheet || null
+                                importSession.selected_sheet || null,
                               )
                             }
                           >
-                            <option value="">{field.required ? "Choose a column" : "Leave unmapped"}</option>
+                            <option value="">
+                              {field.required
+                                ? "Choose a column"
+                                : "Leave unmapped"}
+                            </option>
                             {importSession.detected_columns.map((column) => (
                               <option key={column} value={column}>
                                 {column}
@@ -564,20 +688,29 @@ export function DashboardHome() {
                   </div>
                 </div>
 
-                <div className={importSession ? "border-t border-white/10 pt-2" : "hidden"}>
+                <div
+                  className={
+                    importSession ? "border-t border-white/10 pt-2" : "hidden"
+                  }
+                >
                   <div
                     className={
-                      importSession?.row_errors_preview?.length || importSession?.warnings?.length
+                      importSession?.row_errors_preview?.length ||
+                      importSession?.warnings?.length
                         ? "mb-3 rounded-lg bg-red-900/20 p-2 text-xs text-red-400"
                         : "mb-3 hidden"
                     }
                   >
-                    {importSession?.warnings?.map((warning) => <div key={warning}>{warning}</div>)}
-                    {importSession?.row_errors_preview?.slice(0, 3).map((row) => (
-                      <div key={`${row.row_number}-${row.error}`}>
-                        Row {row.row_number}: {row.error}
-                      </div>
+                    {importSession?.warnings?.map((warning) => (
+                      <div key={warning}>{warning}</div>
                     ))}
+                    {importSession?.row_errors_preview
+                      ?.slice(0, 3)
+                      .map((row) => (
+                        <div key={`${row.row_number}-${row.error}`}>
+                          Row {row.row_number}: {row.error}
+                        </div>
+                      ))}
                     {importSession?.error_report_available ? (
                       <a
                         href={`${API_BASE_URL}/api/v1/imports/${importSession.id}/error-report`}
@@ -590,25 +723,33 @@ export function DashboardHome() {
                   </div>
                   <div className="mb-4 grid grid-cols-2 gap-2 text-xs text-gray-400">
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                      <div className="text-xs uppercase tracking-[0.18em] text-gray-500">Valid rows</div>
+                      <div className="text-xs uppercase tracking-[0.18em] text-gray-500">
+                        Valid rows
+                      </div>
                       <div className="mt-2 text-2xl font-semibold text-white">
                         {importSession?.summary_counts?.valid_rows || 0}
                       </div>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                      <div className="text-xs uppercase tracking-[0.18em] text-gray-500">Invalid rows</div>
+                      <div className="text-xs uppercase tracking-[0.18em] text-gray-500">
+                        Invalid rows
+                      </div>
                       <div className="mt-2 text-2xl font-semibold text-white">
                         {importSession?.summary_counts?.invalid_rows || 0}
                       </div>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                      <div className="text-xs uppercase tracking-[0.18em] text-gray-500">Creates</div>
+                      <div className="text-xs uppercase tracking-[0.18em] text-gray-500">
+                        Creates
+                      </div>
                       <div className="mt-2 text-2xl font-semibold text-white">
                         {importSession?.summary_counts?.created || 0}
                       </div>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                      <div className="text-xs uppercase tracking-[0.18em] text-gray-500">Updates</div>
+                      <div className="text-xs uppercase tracking-[0.18em] text-gray-500">
+                        Updates
+                      </div>
                       <div className="mt-2 text-2xl font-semibold text-white">
                         {importSession?.summary_counts?.updated || 0}
                       </div>
@@ -617,7 +758,9 @@ export function DashboardHome() {
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      onClick={() => importSession && stageMutation.mutate(importSession.id)}
+                      onClick={() =>
+                        importSession && stageMutation.mutate(importSession.id)
+                      }
                       disabled={!importSession || stageMutation.isPending}
                       className="flex-1 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
                     >
@@ -645,7 +788,10 @@ export function DashboardHome() {
 
             <div className="relative z-10 mt-4 grid gap-3 lg:grid-cols-2">
               {(importSession?.sample_previews || []).map((preview, index) => (
-                <div key={`${preview.email || index}`} className="rounded-3xl border border-white/10 bg-white/10 p-4">
+                <div
+                  key={`${preview.email || index}`}
+                  className="rounded-3xl border border-white/10 bg-white/10 p-4"
+                >
                   <div className="mb-3 text-xs uppercase tracking-[0.18em] text-gray-500">
                     {preview.email || "Sample preview"}
                   </div>
@@ -662,7 +808,9 @@ export function DashboardHome() {
 
           <div className="bento-card w-full overflow-hidden p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white">Recent Batches</h3>
+              <h3 className="text-lg font-semibold text-white">
+                Recent Batches
+              </h3>
               <button
                 type="button"
                 onClick={() => void batchesQuery.refetch()}
@@ -686,18 +834,32 @@ export function DashboardHome() {
                   {(batchesQuery.data?.batches || []).map((batch) => (
                     <tr key={batch.id}>
                       <td className="px-4 py-4">
-                        <div className="font-medium text-white">{batch.name}</div>
+                        <div
+                          className="max-w-[16rem] truncate font-medium text-white"
+                          title={batch.name}
+                        >
+                          {batch.name}
+                        </div>
                         <div className="mt-1 text-xs text-gray-500">
-                          {batch.source_filename || "Manual stage"}
+                          <span
+                            className="inline-block max-w-[20rem] truncate align-bottom"
+                            title={batch.source_filename || "Manual stage"}
+                          >
+                            {batch.source_filename || "Manual stage"}
+                          </span>
                         </div>
                       </td>
                       <td className="px-4 py-4">
                         <StatusBadge value={batch.status} />
                       </td>
-                      <td className="px-4 py-4 text-gray-300">{batch.template_name || "Template"}</td>
+                      <td className="px-4 py-4 text-gray-300">
+                        {batch.template_name || "Template"}
+                      </td>
                       <td className="px-4 py-4 text-gray-400">
                         <div>Queued {batch.queued || 0}</div>
-                        <div>Sent {batch.sent || 0} · Failed {batch.failed || 0}</div>
+                        <div>
+                          Sent {batch.sent || 0} · Failed {batch.failed || 0}
+                        </div>
                       </td>
                       <td className="px-4 py-4 text-right">
                         {batch.status === "staged" ? (
@@ -714,7 +876,10 @@ export function DashboardHome() {
                   ))}
                   {!batchesQuery.data?.batches?.length ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-6 text-center text-gray-500">
+                      <td
+                        colSpan={5}
+                        className="px-4 py-6 text-center text-gray-500"
+                      >
                         No campaign batches yet.
                       </td>
                     </tr>
@@ -725,10 +890,12 @@ export function DashboardHome() {
           </div>
         </div>
 
-        <div className="flex flex-col space-y-6">
+        <div className="min-w-0 flex flex-col space-y-6">
           <div className="bento-card flex min-h-[400px] flex-1 flex-col p-6">
             <div className="mb-4 flex items-center justify-between gap-4">
-              <h3 className="text-lg font-semibold text-white">Live Activity</h3>
+              <h3 className="text-lg font-semibold text-white">
+                Live Activity
+              </h3>
               <select
                 className="w-32 rounded-lg border border-transparent bg-white/5 px-2 py-1 text-xs text-white outline-none focus:border-white/20"
                 value={activityFilter}
@@ -748,15 +915,38 @@ export function DashboardHome() {
                   {(activityQuery.data?.rows || []).map((row) => (
                     <tr key={row.id}>
                       <td className="px-2 py-4">
-                        <div className="font-medium text-white">{row.email}</div>
-                        <div className="mt-1 text-xs text-gray-500">{row.name || "There"}</div>
+                        <div
+                          className="max-w-[14rem] truncate font-medium text-white"
+                          title={row.email}
+                        >
+                          {row.email}
+                        </div>
+                        <div className="mt-1 text-xs text-gray-500">
+                          {row.name || "There"}
+                        </div>
                       </td>
                       <td className="px-2 py-4">
                         <StatusBadge value={row.status} />
                       </td>
-                      <td className="px-2 py-4 text-gray-300">{row.batch_name || "—"}</td>
-                      <td className="px-2 py-4 text-gray-400">{row.template_subject || "—"}</td>
-                      <td className="px-2 py-4 text-gray-500">{formatDate(row.updated_at)}</td>
+                      <td className="px-2 py-4 text-gray-300">
+                        <span
+                          className="inline-block max-w-[10rem] truncate align-bottom"
+                          title={row.batch_name || "—"}
+                        >
+                          {row.batch_name || "—"}
+                        </span>
+                      </td>
+                      <td className="px-2 py-4 text-gray-400">
+                        <span
+                          className="inline-block max-w-[12rem] truncate align-bottom"
+                          title={row.template_subject || "—"}
+                        >
+                          {row.template_subject || "—"}
+                        </span>
+                      </td>
+                      <td className="px-2 py-4 text-gray-500">
+                        {formatDate(row.updated_at)}
+                      </td>
                       <td className="px-2 py-4 text-right">
                         {["sent", "failed"].includes(row.status) ? (
                           <button
@@ -784,7 +974,9 @@ export function DashboardHome() {
 
           <div className="bento-card group relative overflow-hidden p-6">
             <div className="pointer-events-none absolute bottom-0 right-0 -mb-10 -mr-10 h-48 w-48 rounded-full bg-blue-500/10 blur-3xl transition-colors group-hover:bg-blue-500/20" />
-            <h3 className="relative z-10 mb-4 text-lg font-semibold text-white">Settings</h3>
+            <h3 className="relative z-10 mb-4 text-lg font-semibold text-white">
+              Settings
+            </h3>
             {settingsDraft ? (
               <form
                 className="relative z-10 space-y-3"
@@ -793,13 +985,17 @@ export function DashboardHome() {
                   settingsMutation.mutate(settingsDraft);
                 }}
               >
-                {settingsDraft.env_has_provider_api_key || settingsDraft.env_has_sender_identity ? (
+                {settingsDraft.env_has_provider_api_key ||
+                settingsDraft.env_has_sender_identity ? (
                   <div className="rounded-xl border border-sky-400/15 bg-sky-400/10 px-3 py-2 text-xs text-sky-100">
-                    Server `.env` defaults are available. You can use them directly without pasting secrets into the dashboard.
+                    Server `.env` defaults are available. You can use them
+                    directly without pasting secrets into the dashboard.
                   </div>
                 ) : null}
                 <div>
-                  <label className="mb-1 block text-xs text-gray-500">{providerLabel} API Key</label>
+                  <label className="mb-1 block text-xs text-gray-500">
+                    {providerLabel} API Key
+                  </label>
                   {settingsDraft.env_has_provider_api_key ? (
                     <label className="mb-2 flex items-center gap-2 text-xs text-gray-300">
                       <input
@@ -826,12 +1022,15 @@ export function DashboardHome() {
                     onChange={onSettingsChange}
                     disabled={settingsDraft.use_env_provider_api_key}
                   />
-                  {!settingsDraft.use_env_provider_api_key && settingsDraft.has_manual_provider_api_key ? (
+                  {!settingsDraft.use_env_provider_api_key &&
+                  settingsDraft.has_manual_provider_api_key ? (
                     <label className="mt-2 flex items-center gap-2 text-xs text-gray-400">
                       <input
                         name="clear_manual_provider_api_key"
                         type="checkbox"
-                        checked={Boolean(settingsDraft.clear_manual_provider_api_key)}
+                        checked={Boolean(
+                          settingsDraft.clear_manual_provider_api_key,
+                        )}
                         onChange={onSettingsChange}
                       />
                       Remove the saved manual {providerLabel} key on next save
@@ -840,7 +1039,9 @@ export function DashboardHome() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
-                    <label className="mb-1 block text-xs text-gray-500">Sender Source</label>
+                    <label className="mb-1 block text-xs text-gray-500">
+                      Sender Source
+                    </label>
                     {settingsDraft.env_has_sender_identity ? (
                       <label className="flex items-center gap-2 text-xs text-gray-300">
                         <input
@@ -850,14 +1051,20 @@ export function DashboardHome() {
                           onChange={onSettingsChange}
                         />
                         Use `.env` sender identity
-                        {settingsDraft.effective_sender_email ? ` (${settingsDraft.effective_sender_email})` : ""}
+                        {settingsDraft.effective_sender_email
+                          ? ` (${settingsDraft.effective_sender_email})`
+                          : ""}
                       </label>
                     ) : (
-                      <div className="text-xs text-gray-500">Using manual sender identity.</div>
+                      <div className="text-xs text-gray-500">
+                        Using manual sender identity.
+                      </div>
                     )}
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs text-gray-500">Sender Email</label>
+                    <label className="mb-1 block text-xs text-gray-500">
+                      Sender Email
+                    </label>
                     <input
                       type="email"
                       name="sender_email"
@@ -872,7 +1079,9 @@ export function DashboardHome() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs text-gray-500">Sender Name</label>
+                    <label className="mb-1 block text-xs text-gray-500">
+                      Sender Name
+                    </label>
                     <input
                       type="text"
                       name="sender_name"
@@ -887,7 +1096,9 @@ export function DashboardHome() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs text-gray-500">Hourly Limit</label>
+                    <label className="mb-1 block text-xs text-gray-500">
+                      Hourly Limit
+                    </label>
                     <input
                       type="number"
                       name="hourly_limit"
@@ -897,7 +1108,9 @@ export function DashboardHome() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs text-gray-500">Daily Limit</label>
+                    <label className="mb-1 block text-xs text-gray-500">
+                      Daily Limit
+                    </label>
                     <input
                       type="number"
                       name="daily_limit"
@@ -908,7 +1121,9 @@ export function DashboardHome() {
                   </div>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-gray-500">Default Template</label>
+                  <label className="mb-1 block text-xs text-gray-500">
+                    Default Template
+                  </label>
                   <select
                     name="default_template_id"
                     className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-purple-500"
@@ -925,10 +1140,14 @@ export function DashboardHome() {
                 </div>
                 <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
                   <div className="text-xs text-gray-400">
-                    <span className="font-medium text-white">{statsQuery.data?.emails_sent_this_hour || 0}</span>/
-                    <span>{statsQuery.data?.hourly_limit || 0}</span> hr &bull;{" "}
-                    <span className="font-medium text-white">{statsQuery.data?.emails_sent_today || 0}</span>/
-                    <span>{statsQuery.data?.daily_limit || 0}</span> day
+                    <span className="font-medium text-white">
+                      {statsQuery.data?.emails_sent_this_hour || 0}
+                    </span>
+                    /<span>{statsQuery.data?.hourly_limit || 0}</span> hr &bull;{" "}
+                    <span className="font-medium text-white">
+                      {statsQuery.data?.emails_sent_today || 0}
+                    </span>
+                    /<span>{statsQuery.data?.daily_limit || 0}</span> day
                   </div>
                   <button
                     type="submit"
