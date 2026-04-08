@@ -98,12 +98,14 @@ def suggest_mapping(
     mapping: Dict[str, str] = {}
     warnings: List[str] = []
     columns = list(columns)
-    normalized_columns = {column: normalize_header(column) for column in columns}
+    normalized_columns = {column: normalize_header(
+        column) for column in columns}
 
     for field in list_mappable_fields(merge_fields_schema):
         key = field["key"]
         aliases = HEADER_ALIASES.get(key, set()) | {normalize_header(key)}
-        exact_matches = [column for column, normalized in normalized_columns.items() if normalized in aliases]
+        exact_matches = [column for column, normalized in normalized_columns.items(
+        ) if normalized in aliases]
 
         if len(exact_matches) == 1:
             mapping[key] = exact_matches[0]
@@ -149,7 +151,8 @@ def load_dataframe_from_session(import_session: ImportSession, sheet_name: Optio
 def preview_rows(frame: pd.DataFrame, limit: int = 5) -> List[Dict[str, Any]]:
     preview: List[Dict[str, Any]] = []
     for _, row in frame.head(limit).iterrows():
-        preview.append({str(column): normalize_value(row[column]) for column in frame.columns})
+        preview.append({str(column): normalize_value(
+            row[column]) for column in frame.columns})
     return preview
 
 
@@ -170,7 +173,8 @@ def create_import_session(
     stored_path = save_import_file(contents, filename)
     sheet_names, selected_sheet, frame = load_workbook(stored_path)
     if len(frame.index) > MAX_IMPORT_ROWS:
-        raise ValueError(f"Import file exceeds the {MAX_IMPORT_ROWS} row limit.")
+        raise ValueError(
+            f"Import file exceeds the {MAX_IMPORT_ROWS} row limit.")
 
     duplicate_headers = detect_duplicate_headers(frame.columns)
     suggested_mapping, warnings = suggest_mapping(
@@ -187,7 +191,8 @@ def create_import_session(
         sheet_names_json=sheet_names,
         detected_columns_json=[str(column) for column in frame.columns],
         mapping_json=suggested_mapping,
-        validation_json={"warnings": warnings, "duplicate_headers": duplicate_headers},
+        validation_json={"warnings": warnings,
+                         "duplicate_headers": duplicate_headers},
         sample_rows_json=preview_rows(frame),
         expires_at=datetime.utcnow() + timedelta(days=2),
     )
@@ -246,9 +251,16 @@ def save_mapping(
     ]
     for required_key in required_fields:
         if not mapping.get(required_key):
-            raise ValueError(f"Field '{required_key}' must be mapped before validation.")
+            raise ValueError(
+                f"Field '{required_key}' must be mapped before validation.")
 
+    existing_validation = import_session.validation_json or {}
     import_session.mapping_json = mapping
+    import_session.validation_json = {
+        "warnings": existing_validation.get("warnings", []),
+        "duplicate_headers": existing_validation.get("duplicate_headers", []),
+    }
+    import_session.error_report_path = None
     import_session.status = "mapped"
     import_session.updated_at = datetime.utcnow()
     return serialize_import_session(import_session, template_version.merge_fields_schema)
@@ -381,7 +393,8 @@ def evaluate_import_session(
         if not payload.get("name"):
             payload["name"] = "There"
 
-        missing_required = [field for field in custom_required_fields if not payload.get(field)]
+        missing_required = [
+            field for field in custom_required_fields if not payload.get(field)]
         if missing_required:
             row_errors.append(
                 {
@@ -429,7 +442,8 @@ def evaluate_import_session(
         [row["email"] for row in valid_rows],
     )
 
-    created_count = sum(1 for row in valid_rows if row["email"] not in existing_contacts)
+    created_count = sum(
+        1 for row in valid_rows if row["email"] not in existing_contacts)
     updated_count = len(valid_rows) - created_count
 
     sample_rows = [row["payload"] for row in valid_rows[:3]]
@@ -469,8 +483,10 @@ def validate_import_session(
     import_session: ImportSession,
     template_version: EmailTemplateVersion,
 ) -> Dict[str, Any]:
-    result = evaluate_import_session(session, user, import_session, template_version)
-    error_report_path = _write_error_report(import_session, result["row_errors"])
+    result = evaluate_import_session(
+        session, user, import_session, template_version)
+    error_report_path = _write_error_report(
+        import_session, result["row_errors"])
     import_session.validation_json = {
         "warnings": result["warnings"],
         "summary_counts": result["summary_counts"],
@@ -484,7 +500,8 @@ def validate_import_session(
     session.commit()
     session.refresh(import_session)
 
-    data = serialize_import_session(import_session, template_version.merge_fields_schema)
+    data = serialize_import_session(
+        import_session, template_version.merge_fields_schema)
     data["row_errors_preview"] = result["row_errors"][:20]
     return data
 
@@ -495,7 +512,8 @@ def stage_batch(
     import_session: ImportSession,
     template_version: EmailTemplateVersion,
 ) -> CampaignBatch:
-    result = evaluate_import_session(session, user, import_session, template_version)
+    result = evaluate_import_session(
+        session, user, import_session, template_version)
     valid_rows = result["valid_rows"]
     if not valid_rows:
         raise ValueError("No valid rows are available to stage.")
@@ -612,7 +630,8 @@ def stage_batch(
 
 
 def launch_batch(session: Session, batch: CampaignBatch) -> CampaignBatch:
-    provider = str((batch.launch_summary_json or {}).get("delivery_provider") or "brevo").lower()
+    provider = str((batch.launch_summary_json or {}).get(
+        "delivery_provider") or "brevo").lower()
     recipients = session.exec(
         select(CampaignRecipient).where(CampaignRecipient.batch_id == batch.id)
     ).all()
@@ -661,7 +680,8 @@ def sync_batch_status(session: Session, batch: CampaignBatch):
     batch.unsubscribed_count = counts.get("unsubscribed", 0)
     batch.updated_at = datetime.utcnow()
 
-    active = counts.get("queued", 0) + counts.get("processing", 0) + counts.get("staged", 0)
+    active = counts.get("queued", 0) + \
+        counts.get("processing", 0) + counts.get("staged", 0)
     if active == 0 and batch.status in {"queued", "processing"}:
         batch.status = "completed_with_errors" if batch.failed_count else "completed"
         batch.completed_at = datetime.utcnow()

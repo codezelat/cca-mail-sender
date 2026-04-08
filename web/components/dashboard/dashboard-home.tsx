@@ -40,6 +40,15 @@ function formatDate(value?: string | null) {
   });
 }
 
+function isMappingReadyForValidation(sessionData: ImportAnalysis): boolean {
+  const mapping = sessionData.mapping || {};
+  const requiredKeys = (sessionData.mappable_fields || [])
+    .filter((field) => field.required)
+    .map((field) => field.key);
+  if (!requiredKeys.length) return false;
+  return requiredKeys.every((key) => Boolean(mapping[key]));
+}
+
 export function DashboardHome() {
   const queryClient = useQueryClient();
   const { pushToast } = useToast();
@@ -113,6 +122,10 @@ export function DashboardHome() {
         : "Provider";
   const providerEnvKey =
     settingsDraft?.provider === "kit" ? "KIT_API_KEY" : "BREVO_SMTP_API_KEY";
+  const hasValidationSummary = Boolean(
+    importSession?.summary_counts &&
+    Object.keys(importSession.summary_counts).length,
+  );
 
   useEffect(() => {
     if (settingsQuery.data) {
@@ -337,6 +350,17 @@ export function DashboardHome() {
         },
       );
       setImportSession(data.import_session);
+      const hasSummary = Boolean(
+        data.import_session.summary_counts &&
+        Object.keys(data.import_session.summary_counts).length,
+      );
+      if (
+        !hasSummary &&
+        isMappingReadyForValidation(data.import_session) &&
+        !validateMutation.isPending
+      ) {
+        validateMutation.mutate(data.import_session.id);
+      }
     } catch (error) {
       pushToast(
         "Mapping Failed",
@@ -533,48 +557,6 @@ export function DashboardHome() {
                           Your file can use different header names. You’ll match
                           them in step 3.
                         </p>
-                        <div>
-                          <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-yellow-500/80">
-                            Required
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {selectedTemplateFields.required.length ? (
-                              selectedTemplateFields.required.map((field) => (
-                                <span
-                                  key={field.key}
-                                  className="rounded-full border border-yellow-500/20 bg-yellow-500/10 px-3 py-1 text-xs font-semibold text-yellow-200"
-                                >
-                                  {field.label || field.key}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-xs text-gray-500">
-                                No required fields.
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-gray-500">
-                            Optional
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {selectedTemplateFields.optional.length ? (
-                              selectedTemplateFields.optional.map((field) => (
-                                <span
-                                  key={field.key}
-                                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-gray-300"
-                                >
-                                  {field.label || field.key}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-xs text-gray-500">
-                                No optional fields.
-                              </span>
-                            )}
-                          </div>
-                        </div>
                       </div>
                     )}
                   </div>
@@ -727,7 +709,9 @@ export function DashboardHome() {
                         Valid rows
                       </div>
                       <div className="mt-2 text-2xl font-semibold text-white">
-                        {importSession?.summary_counts?.valid_rows || 0}
+                        {hasValidationSummary
+                          ? (importSession?.summary_counts?.valid_rows ?? 0)
+                          : "-"}
                       </div>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -735,7 +719,9 @@ export function DashboardHome() {
                         Invalid rows
                       </div>
                       <div className="mt-2 text-2xl font-semibold text-white">
-                        {importSession?.summary_counts?.invalid_rows || 0}
+                        {hasValidationSummary
+                          ? (importSession?.summary_counts?.invalid_rows ?? 0)
+                          : "-"}
                       </div>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -743,7 +729,9 @@ export function DashboardHome() {
                         Creates
                       </div>
                       <div className="mt-2 text-2xl font-semibold text-white">
-                        {importSession?.summary_counts?.created || 0}
+                        {hasValidationSummary
+                          ? (importSession?.summary_counts?.created ?? 0)
+                          : "-"}
                       </div>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -751,10 +739,18 @@ export function DashboardHome() {
                         Updates
                       </div>
                       <div className="mt-2 text-2xl font-semibold text-white">
-                        {importSession?.summary_counts?.updated || 0}
+                        {hasValidationSummary
+                          ? (importSession?.summary_counts?.updated ?? 0)
+                          : "-"}
                       </div>
                     </div>
                   </div>
+                  {!hasValidationSummary ? (
+                    <p className="mb-3 text-xs text-gray-500">
+                      Counts appear after validation. Click Validate once
+                      mapping is complete.
+                    </p>
+                  ) : null}
                   <div className="flex gap-2">
                     <button
                       type="button"
