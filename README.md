@@ -560,6 +560,25 @@ Optional dependency scan:
 make audit-security
 ```
 
+### One-command local development
+
+Run local infra + migrations + API reload + worker + web in one terminal:
+
+```bash
+make dev-up
+```
+
+Stop with `Ctrl+C`.
+
+You can also run each piece separately:
+
+```bash
+make dev-infra
+make dev-api
+make dev-worker
+make dev-web
+```
+
 ### Full stack
 
 ```bash
